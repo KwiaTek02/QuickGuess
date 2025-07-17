@@ -18,7 +18,13 @@ namespace QuickGuess.Services.Auth
 
         public string GenerateToken(User user)
         {
+            //var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
+            //var key = new SymmetricSecurityKey(Convert.FromBase64String(_jwtSettings.Secret));
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
+
+
+
+
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
