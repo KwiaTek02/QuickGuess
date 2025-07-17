@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using QuickGuess.Data;
 using System.Security.Claims;
 using System.Text;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,13 +19,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-//builder.Services.AddOpenApi();
+builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
 
 //builder.Services.AddSwaggerGen();
 
-builder.Services.AddSwaggerGen(c =>
+/*builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
@@ -53,12 +54,19 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
-});
+});*/
 
 
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT secret not configured.");
-var key = Encoding.ASCII.GetBytes(jwtSecret);
+Console.WriteLine(">>> JWT SECRET LENGTH: " + jwtSecret.Length);
+Console.WriteLine(">>> JWT SECRET (first 10 chars): " + jwtSecret.Substring(0, 10));
+
+//var key = Encoding.ASCII.GetBytes(jwtSecret);
+//var key = Convert.FromBase64String(jwtSecret);
+var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+
 
 builder.Services.AddAuthentication(options =>
     {
@@ -80,40 +88,52 @@ builder.Services.AddAuthentication(options =>
             ClockSkew = TimeSpan.Zero,
             NameClaimType = ClaimTypes.NameIdentifier
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Headers["Authorization"].FirstOrDefault();
+                if (token != null && token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Token = token.Substring("Bearer ".Length).Trim(); //  WA¯NE
+                }
+
+                Console.WriteLine("Parsed JWT: " + context.Token);
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine("JWT validation failed: " + context.Exception.Message);
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.MapOpenApi();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapScalarApiReference(options =>
+    {
+        options.Title = "QuickGuess API Reference";
+        options.Theme = ScalarTheme.BluePlanet;
+        options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+        options.CustomCss = "";
+        options.ShowSidebar = true;
+    });
+    //app.UseSwagger();
+    //app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.Use(async (context, next) =>
-{
-    Console.WriteLine("---- MIDDLEWARE ----");
-    if (context.User.Identity?.IsAuthenticated == true)
-    {
-        Console.WriteLine("User is authenticated ");
-        foreach (var c in context.User.Claims)
-            Console.WriteLine($"CLAIM: {c.Type} = {c.Value}");
-    }
-    else
-    {
-        Console.WriteLine("User is NOT authenticated ");
-    }
-    Console.WriteLine("---------------------");
-    await next();
-});
 
 app.MapControllers();
 
