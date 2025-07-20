@@ -79,11 +79,28 @@ namespace QuickGuess.Controllers
             }
 
             await _db.SaveChangesAsync();
+
+            int totalScore = 0;
+            int position = 0;
+
+            if (request.Mode == "ranking")
+            {
+                var board = await _db.Leaderboards.FindAsync(userId);
+                totalScore = board?.ScoreTotal ?? 0;
+
+                // oblicz ranking (liczba osób z większym wynikiem + 1)
+                position = await _db.Leaderboards.CountAsync(b => b.ScoreTotal > totalScore) + 1;
+            }
+
             return Ok(new
             {
                 Correct = correct,
-                Score = score
+                Score = score,
+                TotalScore = totalScore,
+                RankingPosition = position,
+                CorrectTitle = correctTitle
             });
+
         }
     }
 }

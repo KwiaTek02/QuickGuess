@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using QuickGuess.Data;
 
 namespace QuickGuess.Controllers
@@ -9,12 +8,10 @@ namespace QuickGuess.Controllers
     public class MediaController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        private readonly HttpClient _http;
 
-        public MediaController(ApplicationDbContext db, IHttpClientFactory clientFactory)
+        public MediaController(ApplicationDbContext db)
         {
             _db = db;
-            _http = clientFactory.CreateClient();
         }
 
         [HttpGet("song-audio/{id:guid}")]
@@ -23,8 +20,22 @@ namespace QuickGuess.Controllers
             var song = await _db.Songs.FindAsync(id);
             if (song == null) return NotFound();
 
-            var stream = await _http.GetStreamAsync(song.AudioUrl);
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", song.AudioUrl.TrimStart('/'));
+
+            Console.WriteLine(">>> Szukam pliku audio: " + filePath);
+            if (!System.IO.File.Exists(filePath))
+            {
+                Console.WriteLine(">>> Nie znaleziono pliku: " + filePath);
+                return NotFound();
+            }
+
+            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            Response.Headers["Content-Disposition"] = "inline";
+
+
             return File(stream, "audio/mpeg");
+
+
         }
 
         [HttpGet("movie-image/{id:guid}")]
@@ -33,7 +44,12 @@ namespace QuickGuess.Controllers
             var movie = await _db.Movies.FindAsync(id);
             if (movie == null) return NotFound();
 
-            var stream = await _http.GetStreamAsync(movie.ImageUrl);
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", movie.ImageUrl.TrimStart('/'));
+
+            if (!System.IO.File.Exists(filePath))
+                return NotFound();
+
+            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             return File(stream, "image/jpeg");
         }
     }

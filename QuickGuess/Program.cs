@@ -3,11 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using QuickGuess.Data;
+using QuickGuess.Models.Settings;
+using Scalar.AspNetCore;
 using System.Security.Claims;
 using System.Text;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+
 
 // Add services to the container.
 
@@ -57,6 +61,9 @@ builder.Services.AddEndpointsApiExplorer();
 });*/
 
 
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+var key = Encoding.UTF8.GetBytes(jwtSettings.Secret);
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT secret not configured.");
 Console.WriteLine(">>> JWT SECRET LENGTH: " + jwtSecret.Length);
@@ -64,7 +71,7 @@ Console.WriteLine(">>> JWT SECRET (first 10 chars): " + jwtSecret.Substring(0, 1
 
 //var key = Encoding.ASCII.GetBytes(jwtSecret);
 //var key = Convert.FromBase64String(jwtSecret);
-var key = Encoding.UTF8.GetBytes(jwtSecret);
+//var key = Encoding.UTF8.GetBytes(jwtSecret);
 
 
 
@@ -72,44 +79,38 @@ builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = true;
+        options.RequireHttpsMetadata = false;
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            RoleClaimType = ClaimTypes.Role,
-            ClockSkew = TimeSpan.Zero,
-            NameClaimType = ClaimTypes.NameIdentifier
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(key)
         };
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var token = context.Request.Headers["Authorization"].FirstOrDefault();
-                if (token != null && token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                {
-                    context.Token = token.Substring("Bearer ".Length).Trim(); //  WA¯NE
-                }
+    })
+    .AddCookie("Cookies");
 
-                Console.WriteLine("Parsed JWT: " + context.Token);
-                return Task.CompletedTask;
-            },
-            OnAuthenticationFailed = context =>
-            {
-                Console.WriteLine("JWT validation failed: " + context.Exception.Message);
-                return Task.CompletedTask;
-            }
-        };
-    });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("https://localhost:7003")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            .SetIsOriginAllowed(_ => true);
+    });
+});
 
 var app = builder.Build();
 
@@ -130,9 +131,34 @@ if (app.Environment.IsDevelopment())
     //app.UseSwaggerUI();
 }
 
+
+
+
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseStaticFiles();
+app.UseCors();
 
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        Console.WriteLine(">>> Authenticated user:");
+        foreach (var claim in context.User.Claims)
+        {
+            Console.WriteLine($" - {claim.Type} = {claim.Value}");
+        }
+    }
+    else
+    {
+        Console.WriteLine(">>> Request WITHOUT valid JWT");
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();
