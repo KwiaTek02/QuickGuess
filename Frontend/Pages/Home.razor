@@ -1,0 +1,12 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+
+<h1 class="text-3xl font-bold mb-4">Witamy w QuickGuess!</h1>
+<p class="mb-6">Wybierz jedną z naszych gier i sprawdź swoją wiedzę oraz refleks!</p>
+
+<ul class="list-disc list-inside mb-6">
+    <li><strong>🎵 Jaka to piosenka?</strong> – Rozpoznaj piosenkę po krótkim fragmencie dźwięku.</li>
+    <li><strong>🎬 Jaki to film?</strong> – Zgadnij tytuł filmu na podstawie jednego zdjęcia.</li>
+</ul>
+
+<button class="bg-indigo-600 text-white px-6 py-3 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Zacznij</button>

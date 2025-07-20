@@ -1,9 +1,14 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using System.IdentityModel.Tokens.Jwt;
+//using Microsoft.IdentityModel.Tokens;
 using QuickGuess.Models;
 using QuickGuess.Models.Settings;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+using JwtRegisteredClaimNames = System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames;
+
 
 namespace QuickGuess.Services.Auth
 {
@@ -22,6 +27,7 @@ namespace QuickGuess.Services.Auth
             //var key = new SymmetricSecurityKey(Convert.FromBase64String(_jwtSettings.Secret));
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
 
+            Console.WriteLine(">>> JWT secret used in token generator: " + _jwtSettings.Secret);
 
 
 
@@ -37,10 +43,20 @@ namespace QuickGuess.Services.Auth
             };
 
             var token = new JwtSecurityToken(
+                issuer: _jwtSettings.Issuer,
+                audience: _jwtSettings.Audience,
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(_jwtSettings.TokenLifetimeMinutes),
                 signingCredentials: creds
             );
+
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(new JwtSecurityTokenHandler().WriteToken(token));
+            Console.WriteLine(">>> Decoded JWT header:");
+            foreach (var item in jwt.Header)
+            {
+                Console.WriteLine($" - {item.Key}: {item.Value}");
+            }
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }

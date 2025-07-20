@@ -1,0 +1,59 @@
+﻿@using Frontend.Services
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject AuthState AuthState
+
+<nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
+    <div class="text-xl font-bold cursor-pointer" @onclick='() => Navigation.NavigateTo("/")'>QuickGuess</div>
+    <div>
+        @if (IsLoggedIn)
+        {
+            <span class="mr-4">Witaj, @FullName</span>
+            <button class="bg-red-500 px-3 py-1 rounded" @onclick="Logout">Wyloguj się</button>
+        }
+        else
+        {
+            <button class="bg-blue-500 px-3 py-1 rounded mr-2" @onclick='() => Navigation.NavigateTo("/login")'>Zaloguj się</button>
+            <button class="bg-green-500 px-3 py-1 rounded" @onclick='() => Navigation.NavigateTo("/register")'>Zarejestruj się</button>
+        }
+    </div>
+</nav>
+
+@code {
+    private string? FullName;
+    private bool IsLoggedIn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState.OnChange += async () =>
+        {
+            await LoadUser();
+            StateHasChanged();
+        };
+
+        await LoadUser();
+    }
+
+    private async Task LoadUser()
+    {
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            IsLoggedIn = true;
+            FullName = await JS.InvokeAsync<string>("localStorage.getItem", "authUser") ?? "Użytkownik";
+        }
+        else
+        {
+            IsLoggedIn = false;
+        }
+    }
+
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "authUser");
+        AuthState.NotifyAuthenticationChanged();
+        Navigation.NavigateTo("/login", true);
+    }
+}

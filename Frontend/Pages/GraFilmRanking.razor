@@ -1,0 +1,195 @@
+﻿@page "/gra-film-ranking"
+@using Frontend.Services
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject AuthorizedHttpClient AuthHttp
+@inject HttpClient Http
+
+<h2 class="text-2xl font-bold mb-4">🎯 Tryb Rankingowy — Film</h2>
+
+@if (!Started)
+{
+    <p class="mb-4">Rozpoznaj film po kadrze!</p>
+    <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
+}
+else if (CurrentMovie != null)
+{
+    <img src="@ImageUrl" class="max-w-full max-h-[500px] mb-4 border rounded shadow" />
+
+    @if (Started && !Answered)
+    {
+        <div class="text-3xl font-mono font-bold text-center animate-pulse mt-4">
+            ⏳ @Countdown s
+        </div>
+    }
+
+    <div class="mt-4">
+        <input class="border p-2 w-full" placeholder="Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" />
+        @if (TitleSuggestions.Any())
+        {
+            <ul class="border bg-white shadow absolute z-10">
+                @foreach (var title in TitleSuggestions)
+                {
+                    <li @onclick="@(() => SelectSuggestion(title))" class="cursor-pointer hover:bg-gray-200 px-2 py-1">@title</li>
+                }
+            </ul>
+        }
+        <button class="bg-green-600 text-white px-4 py-2 mt-2 rounded" @onclick="SubmitGuess">Zatwierdź</button>
+    </div>
+
+    @if (Answered)
+    {
+        <div class="mt-4 p-4 rounded shadow bg-gray-100">
+            <p class="font-bold text-lg whitespace-pre-line">@ResultMessage</p>
+
+            <div class="flex gap-4 mt-4">
+                <button class="bg-gray-500 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded" @onclick="StartGame">Dalej</button>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    protected class MovieDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
+    protected class GuessResult
+    {
+        public bool Correct { get; set; }
+        public int Score { get; set; }
+        public int TotalScore { get; set; }
+        public int RankingPosition { get; set; }
+        public string CorrectTitle { get; set; } = "";
+    }
+
+    protected MovieDto? CurrentMovie;
+    protected string ImageUrl = "";
+    protected string Guess = string.Empty;
+    protected bool Started = false;
+    protected bool Answered = false;
+    protected string ResultMessage = "";
+    protected DateTime StartTime;
+    private List<string> TitleSuggestions = new();
+    private int Countdown = 20;
+    private System.Timers.Timer? countdownTimer;
+    private Guid GameSessionId = Guid.NewGuid();
+
+    private void StartCountdown()
+    {
+        Countdown = 20;
+
+        countdownTimer?.Stop();
+        countdownTimer = new System.Timers.Timer(1000);
+        countdownTimer.Elapsed += async (_, _) =>
+        {
+            if (Countdown > 0)
+            {
+                Countdown--;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                countdownTimer?.Stop();
+                await TimeoutGuess(GameSessionId);
+            }
+        };
+        countdownTimer.Start();
+    }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Guess = e.Value?.ToString() ?? "";
+        if (Guess.Length >= 2)
+        {
+            TitleSuggestions = await Http.GetFromJsonAsync<List<string>>($"/api/movies/titles?query={Guess}");
+        }
+        else
+        {
+            TitleSuggestions.Clear();
+        }
+    }
+
+    private void SelectSuggestion(string title)
+    {
+        Guess = title;
+        TitleSuggestions.Clear();
+    }
+
+    protected async Task StartGame()
+    {
+        GameSessionId = Guid.NewGuid();
+
+        Started = true;
+        Answered = false;
+        ResultMessage = "";
+        Guess = "";
+
+        var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
+        if (movies?.Count > 0)
+        {
+            CurrentMovie = movies[0];
+            ImageUrl = $"https://localhost:7236/api/media/movie-image/{CurrentMovie.Id}";
+            StateHasChanged();
+            StartTime = DateTime.Now;
+            StartCountdown();
+        }
+    }
+
+    protected virtual async Task SubmitGuess()
+    {
+        if (CurrentMovie == null) return;
+
+        countdownTimer?.Stop();
+
+        var duration = (int)(DateTime.Now - StartTime).TotalSeconds;
+
+        var request = new
+        {
+            itemId = CurrentMovie.Id,
+            guessText = CleanGuess(Guess),
+            mode = "ranking",
+            duration = duration
+        };
+
+        var client = await AuthHttp.GetClientAsync();
+        var res = await client.PostAsJsonAsync("/api/guess/movie", request);
+
+        if (!res.IsSuccessStatusCode)
+        {
+            ResultMessage = "❌ Błąd serwera lub brak autoryzacji.";
+            Answered = true;
+            return;
+        }
+
+        var result = await res.Content.ReadFromJsonAsync<GuessResult>();
+        Answered = true;
+
+        ResultMessage = result!.Correct
+            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n"
+              + $"Twój łączny wynik: {result.TotalScore} pkt\n"
+              + $"Pozycja w rankingu: #{result.RankingPosition}"
+            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n"
+              + $"Twój wynik: {result.Score} pkt w {duration} sek\n"
+              + $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
+    }
+
+    [JSInvokable]
+    public async Task TimeoutGuess(Guid sessionId)
+    {
+        if (sessionId != GameSessionId || Answered || !Started)
+            return;
+
+        Answered = true;
+        ResultMessage = "⏱ Czas minął!";
+        StateHasChanged();
+    }
+
+    private string CleanGuess(string input)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(input, @"^(.*?)(?: \(\d{4}\))?$");
+        if (match.Success)
+        {
+            return match.Groups[1].Value.Trim();
+        }
+        return input.Trim();
+    }
+}
