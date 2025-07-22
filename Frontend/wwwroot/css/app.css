@@ -1,3 +1,9 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
@@ -86,3 +92,178 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.fullscreen-bg {
+    background-image: url('/images/background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.15);
+}
+
+    .login-card h2 {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .login-card input {
+        width: 100%;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 1rem;
+    }
+
+    .login-card button {
+        width: 100%;
+        background-color: #007bff;
+        color: white;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+        .login-card button:hover {
+            background-color: #0056b3;
+        }
+
+    .login-card .error {
+        color: red;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .login-card a {
+        display: block;
+        text-align: center;
+        font-size: 0.875rem;
+        color: #007bff;
+        margin-top: 1rem;
+        text-decoration: none;
+    }
+
+.app-background {
+    background-image: url('/images/background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    color: white;
+}
+
+.gradient-border {
+    position: relative;
+    width: 100%;
+    overflow: visible; /* wa¿ne */
+}
+
+
+
+.nav-bar {
+    position: relative;
+    padding: 1.5rem 3rem; /* Zwiêkszony padding */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(6px);
+    z-index: 1;
+    background-color: rgba(15, 15, 15, 0.95);
+    border-bottom-left-radius: 2.5rem;
+    border-bottom-right-radius: 2.5rem;
+    overflow: hidden;
+    font-size: 1.25rem; /* Wiêksza czcionka ca³ego paska */
+}
+
+    .nav-bar::before {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 8px; /* grubszy gradient */
+        background: linear-gradient(to right, #facc15, #38bdf8, #ffffff, #a855f7, #22c55e);
+        z-index: 2;
+        border-bottom-left-radius: 2.5rem;
+        border-bottom-right-radius: 2.5rem;
+        pointer-events: none;
+    }
+
+
+
+
+    .nav-bar .logo {
+        font-size: 2rem; /* Wiêksze logo */
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+        .nav-bar .logo:hover {
+            color: #00d1ff;
+        }
+
+.nav-actions {
+    display: flex;
+    gap: 1rem; /* wiêksze odstêpy miêdzy przyciskami */
+    align-items: center;
+}
+
+.username {
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s ease, color 0.3s ease;
+    font-weight: 600;
+}
+
+    .btn.login {
+        background-color: #2563eb;
+        color: white;
+    }
+
+        .btn.login:hover {
+            background-color: #1d4ed8;
+        }
+
+    .btn.register {
+        background-color: #10b981;
+        color: white;
+    }
+
+        .btn.register:hover {
+            background-color: #059669;
+        }
+
+    .btn.logout {
+        background-color: #ef4444;
+        color: white;
+    }
+
+        .btn.logout:hover {
+            background-color: #dc2626;
+        }
