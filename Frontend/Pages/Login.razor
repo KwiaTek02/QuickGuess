@@ -4,19 +4,41 @@
 @inject IAuthService AuthService
 
 <div class="fullscreen-bg">
-    <div class="login-card">
-        <h2>Log in</h2>
+    <div class="login-card enhanced">
+        <h2 class="login-title">Logowanie</h2>
 
         @if (!string.IsNullOrWhiteSpace(Error))
         {
             <p class="error">@Error</p>
         }
 
-        <input placeholder="Email" @bind="Email" />
-        <input type="password" placeholder="Hasło" @bind="Password" />
-        <button @onclick="LoginUser">Login</button>
+        <div class="input-wrapper">
+            <i class="bi bi-envelope-fill input-icon"></i>
+            <InputText class="input-field" @bind-Value="Email" placeholder="Email" />
+        </div>
 
-        <a href="#">Forgot your password?</a>
+        <div class="input-wrapper">
+            <i class="bi bi-lock-fill input-icon"></i>
+            <InputText class="input-field" @bind-Value="Password" placeholder="Hasło" type="password" />
+        </div>
+
+        <div class="auth-links left-align">
+            <a href="#">Zapomniałeś hasła?</a>
+        </div>
+1
+        <button @onclick="LoginUser" class="btn login-btn">Zaloguj się</button>
+
+        <div class="google-btn-wrapper">
+            <button class="google-btn">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon" />
+                Zaloguj się przez Google
+            </button>
+        </div>
+
+        <div class="auth-links center-row">
+            <span>Nie masz konta?</span>
+            <a href="/register" style="margin-left: 0.4rem;">Zarejestruj się</a>
+        </div>
     </div>
 </div>
 

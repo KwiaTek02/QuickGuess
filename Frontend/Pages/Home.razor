@@ -1,12 +1,40 @@
 ﻿@page "/"
 @inject NavigationManager Navigation
 
-<h1 class="text-3xl font-bold mb-4">Witamy w QuickGuess!</h1>
-<p class="mb-6">Wybierz jedną z naszych gier i sprawdź swoją wiedzę oraz refleks!</p>
+<div class="home-container">
+    <h1 class="home-title">🎧 Witamy w QuickGuess!</h1>
+    <p class="home-subtitle">Wybierz jedną z naszych gier i sprawdź swoją wiedzę oraz refleks!</p>
 
-<ul class="list-disc list-inside mb-6">
-    <li><strong>🎵 Jaka to piosenka?</strong> – Rozpoznaj piosenkę po krótkim fragmencie dźwięku.</li>
-    <li><strong>🎬 Jaki to film?</strong> – Zgadnij tytuł filmu na podstawie jednego zdjęcia.</li>
-</ul>
+    <div class="game-options">
+        <div class="game-box">
+            <h2>🎵 Jaka to piosenka?</h2>
+            <p>Zgadnij utwór muzyczny na podstawie krótkiego fragmentu audio. Masz 20 sekund – im szybciej odpowiesz, tym więcej punktów zdobędziesz!</p>
+            <p>Dostępne tryby:</p>
+            <ul>
+                <li><strong>Rankingowy</strong> – punkty są liczone, a Twoje wyniki trafiają do rankingu.</li>
+                <li><strong>Treningowy</strong> – bez presji, ćwicz bez zdobywania punktów.</li>
+            </ul>
+        </div>
 
-<button class="bg-indigo-600 text-white px-6 py-3 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Zacznij</button>
+        <div class="game-box">
+            <h2>🎬 Jaki to film?</h2>
+            <p>Rozpoznaj film po pojedynczym kadrze. Masz 20 sekund – szybkość to klucz do wysokiego wyniku!</p>
+            <p>Dostępne tryby:</p>
+            <ul>
+                <li><strong>Rankingowy</strong> – zdobywaj punkty i rywalizuj z innymi graczami.</li>
+                <li><strong>Treningowy</strong> – tryb bez punktacji, idealny do nauki.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="start-button-wrapper">
+        <button class="btn start-button" @onclick='() => Navigation.NavigateTo("/panel")'>Zaczynajmy</button>
+    </div>
+</div>
+
+<style>
+    html, body {
+        overflow: hidden;
+        height: 100vh;
+    }
+</style>

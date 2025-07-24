@@ -124,7 +124,7 @@ code {
         margin-bottom: 1rem;
         border: 1px solid #ccc;
         border-radius: 6px;
-        font-size: 1rem;
+        font-size: 0.5rem;
     }
 
     .login-card button {
@@ -149,14 +149,7 @@ code {
         margin-bottom: 1rem;
     }
 
-    .login-card a {
-        display: block;
-        text-align: center;
-        font-size: 0.875rem;
-        color: #007bff;
-        margin-top: 1rem;
-        text-decoration: none;
-    }
+
 
 .app-background {
     background-image: url('/images/background.png');
@@ -197,7 +190,7 @@ code {
         left: 0;
         width: 100%;
         height: 8px; /* grubszy gradient */
-        background: linear-gradient(to right, #facc15, #38bdf8, #ffffff, #a855f7, #22c55e);
+        background: linear-gradient(to right, #ffffff,#ffe400, #39ff14, #38bdf8, #ff2097, #ffffff);
         z-index: 2;
         border-bottom-left-radius: 2.5rem;
         border-bottom-right-radius: 2.5rem;
@@ -267,3 +260,332 @@ code {
         .btn.logout:hover {
             background-color: #dc2626;
         }
+
+
+.login-card.enhanced {
+    text-align: center;
+    max-width: 430px;
+    padding: 3rem 2rem;
+}
+
+.login-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    margin-top: 0;
+    color: #1f2937;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    padding: 0.25rem 0.75rem; /* mniej paddingu góra/dó³ = bardziej wyœrodkowany */
+    height: 3rem; /* ustalona wysokoœæ = stabilna wysokoœæ ca³ej grupy */
+}
+
+.input-icon {
+    font-size: 1rem;
+    height: 1.5rem;
+    color: #666;
+    margin-right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+}
+
+.input-field {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 0.95rem;
+    padding: 0;
+    background: transparent;
+    height: 100%;
+}
+
+.input-group input {
+    flex: 1;
+    height: 100%; /* dostosuj do wysokoœci grupy */
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    padding: 0 0.5rem; /* poziomy padding */
+    line-height: 1;
+}
+
+.login-btn {
+    margin-top: 1rem;
+    margin-bottom: 0.75rem; /* dodaj to */
+    background-color: #0d47a1;
+    color: white;
+    font-weight: bold;
+    font-size: 1.05rem;
+}
+
+.google-btn-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.login-card .google-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #444;
+    padding: 0.6rem 1.25rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    width: auto;
+    min-width: 250px;
+    margin: 0 auto;
+    transition: box-shadow 0.5s ease;
+}
+
+.login-card .google-btn:hover {
+    background-color: #ffffff;
+    box-shadow: 0 2px 30px rgba(0, 0, 0, 0.15);
+}
+
+.google-icon {
+    height: 20px;
+    width: 20px;
+    margin-right: 0.5rem;
+}
+
+.auth-links {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #374151;
+}
+    .auth-links.left-align {
+        text-align: left;
+        margin-top: 0.5rem;
+    }
+
+        .auth-links.left-align a {
+            display: block;
+            text-align: left;
+            width: 100%;
+            margin-top: 0.25rem;
+            padding-left: 0.25rem;
+        }
+
+
+
+    .auth-links.center-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        margin-top: 1.25rem;
+    }
+
+        .auth-links.center-row a {
+            display: inline;
+        }
+
+    .auth-links a {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    height: 3rem; /* sta³a wysokoœæ */
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+    .input-with-icon i {
+        font-size: 1.2rem;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        margin-right: 0.5rem;
+        width: 1.5rem;
+    }
+
+.icon-input {
+    border: none;
+    background: transparent;
+    flex: 1;
+    outline: none;
+    font-size: 1rem;
+    height: 100%; /* sprawia ¿e input ma pe³n¹ wysokoœæ kontenera */
+    line-height: 1rem;
+    padding: 0; /* usuñ padding który móg³by przesuwaæ tekst w pionie */
+    margin: 0;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    background-color: white;
+    border-radius: 20px;
+    padding: 0.4rem 0.75rem;
+
+    margin-bottom: 1rem;
+    height: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Nadpisanie stylów Blazor InputText (form-control itp.) */
+    input.input-field,
+    input.input-field:focus,
+    input.input-field:active {
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        outline: none !important;
+        font-size: 1rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100% !important;
+        width: 100% !important;
+        transition: none !important;
+    }
+
+        input.input-field:focus {
+            font-size: 1rem !important;
+            transform: none !important;
+        }
+
+        input.input-field:-webkit-autofill {
+            background-color: transparent !important;
+            -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+            font-size: 1rem !important;
+            color: #000 !important;
+            transition: background-color 9999s ease-in-out 0s !important;
+        }
+
+.auth-links.center-row span,
+.auth-links.center-row a {
+    display: inline;
+    line-height: 1.2;
+}
+
+input:-webkit-autofill {
+    font-size: 1rem !important;
+}
+
+.home-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+    margin-top: -5rem;
+}
+
+.home-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+}
+
+.home-subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 3rem;
+}
+
+.game-options {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: nowrap;
+    margin-bottom: 2.5rem;
+}
+
+.game-box {
+    background-color: rgba(255, 255, 255, 0.07);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    padding: 2rem;
+    flex: 1 1 45%;
+    min-width: 300px;
+    text-align: left;
+    color: #f9fafb;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(4px);
+}
+
+    .game-box h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #fcd34d;
+    }
+
+    .game-box p {
+        margin-bottom: 0.75rem;
+        line-height: 1.5;
+    }
+
+    .game-box ul {
+        list-style: disc;
+        margin-left: 1.25rem;
+        line-height: 1.5;
+    }
+
+.start-button-wrapper {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.start-button {
+    background-color: #38bdf8;
+    font-size: 1.25rem;
+    padding: 0.9rem 2rem;
+    border-radius: 9999px;
+    font-weight: bold;
+}
+
+    .start-button:hover {
+        background-color: #0ea5e9;
+    }
+
+@media (max-width: 900px) {
+    .game-options {
+        flex-direction: column;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .game-box {
+        width: 100%;
+        max-width: 500px;
+    }
+}
