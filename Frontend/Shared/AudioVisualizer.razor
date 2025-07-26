@@ -1,0 +1,29 @@
+﻿@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter] public bool IsPlaying { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("initVisualizer");
+        }
+
+        if (IsPlaying)
+        {
+            await JSRuntime.InvokeVoidAsync("startVisualizer");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("stopVisualizer");
+        }
+    }
+}
+
+<div class="audio-visualizer" id="visualizer">
+    @for (int i = 0; i < 32; i++)
+    {
+        <div class="bar" id="bar-@i"></div>
+    }
+</div>

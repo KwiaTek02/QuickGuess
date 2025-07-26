@@ -1,20 +1,30 @@
 ﻿@page "/panel"
 @inject NavigationManager Navigation
 
-<h2 class="text-2xl font-bold mb-4">Panel gracza</h2>
+<div class="player-panel">
+    <div class="left-panel">
+        <h2 class="section-title">🎮 Panel gracza</h2>
 
-<div class="flex gap-4 mb-6">
-    <button class="bg-blue-600 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel-piosenka")'>🎵 Tryb Piosenka</button>
-    <button class="bg-red-600 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel-film")'>🎬 Tryb Film</button>
+        <div class="mode-buttons">
+            <button class="mode-btn music" @onclick='() => Navigation.NavigateTo("/panel-piosenka")'>🎵 Tryb Piosenka</button>
+            <button class="mode-btn film" @onclick='() => Navigation.NavigateTo("/panel-film")'>🎬 Tryb Film</button>
+        </div>
+
+        <div class="stats-box">
+            <h3 class="box-title">📊 Twoje statystyki</h3>
+            <ul>
+                <li>Liczba gier rankingowych: ...</li>
+                <li>Średni wynik: ...</li>
+                <li>Najlepszy wynik: ...</li>
+                <li>Poprawne odpowiedzi: ...</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="ranking-box">
+            <h3 class="box-title">🏆 Ranking TOP 10</h3>
+            <RankingTop10 />
+        </div>
+    </div>
 </div>
-
-<h3 class="text-xl font-semibold mb-2">Ranking TOP 10</h3>
-<RankingTop10 />
-
-<h3 class="text-xl font-semibold mt-6 mb-2">Twoje statystyki</h3>
-<ul class="list-disc list-inside">
-    <li>Liczba gier rankingowych: ...</li>
-    <li>Średni wynik: ...</li>
-    <li>Najlepszy wynik: ...</li>
-    <li>Poprawne odpowiedzi: ...</li>
-</ul>

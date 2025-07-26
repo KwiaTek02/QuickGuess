@@ -1,9 +1,30 @@
-﻿@page "/panel-piosenka"
+﻿
+@page "/panel-piosenka"
 @inject NavigationManager Navigation
 
-<h2 class="text-2xl font-bold mb-4">🎵 Tryb Piosenka</h2>
-<div class="flex gap-4">
-    <button class="bg-green-600 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/gra-piosenka-ranking")'>🎯 Tryb Rankingowy</button>
-    <button class="bg-yellow-500 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/gra-piosenka-trening")'>🧠 Tryb Treningowy</button>
+<div class="player-panel">
+    <div class="left-panel">
+        <h2 class="section-title">🎵 Tryb Piosenka</h2>
+        <div class="mode-buttons">
+            <button class="mode-btn music" @onclick='() => Navigation.NavigateTo("/gra-piosenka-ranking")'>🎯 Tryb Rankingowy</button>
+            <button class="mode-btn music" @onclick='() => Navigation.NavigateTo("/gra-piosenka-trening")'>🧠 Tryb Treningowy</button>
+        </div>
+        <div class="stats-box">
+            <h3 class="box-title">📊 Twoje statystyki</h3>
+            <ul>
+                <li>Liczba gier rankingowych: ...</li>
+                <li>Średni wynik: ...</li>
+                <li>Najlepszy wynik: ...</li>
+                <li>Poprawne odpowiedzi: ...</li>
+            </ul>
+        </div>
+    </div>
+    <div class="right-panel">
+        <div class="ranking-box">
+            <h3 class="box-title">🏆 Ranking Piosenki</h3>
+            <RankingTop10 TylkoPiosenki="true" />
+        </div>
+    </div>
 </div>
+
 
