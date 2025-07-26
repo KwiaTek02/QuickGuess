@@ -1,0 +1,111 @@
+﻿@inject HttpClient Http
+@using Microsoft.AspNetCore.Components
+
+@if (!(TylkoPiosenki || TylkoFilmy))
+{
+    <div class="ranking-tabs">
+        <button class="@GetTabClass("global")" @onclick='() => LoadLeaderboard("global")'>🌐 Ogólne</button>
+        <button class="@GetTabClass("songs")" @onclick='() => LoadLeaderboard("songs")'>🎵 Muzyka</button>
+        <button class="@GetTabClass("movies")" @onclick='() => LoadLeaderboard("movies")'>🎬 Filmy</button>
+    </div>
+}
+
+<ul class="ranking-list">
+    @if (leaderboard.Count == 0)
+    {
+        <li>Ładowanie rankingu...</li>
+    }
+    else
+    {
+        @foreach (var (username, score) in leaderboard.Take(10))
+        {
+            <li><strong>@username</strong>: @score pkt</li>
+        }
+    }
+</ul>
+
+@code {
+    [Parameter] public bool TylkoPiosenki { get; set; } = false;
+    [Parameter] public bool TylkoFilmy { get; set; } = false;
+
+    private string activeTab = "global";
+    private List<(string Username, int Score)> leaderboard = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (TylkoPiosenki)
+        {
+            activeTab = "songs";
+            await LoadLeaderboard("songs");
+        }
+        else if (TylkoFilmy)
+        {
+            activeTab = "movies";
+            await LoadLeaderboard("movies");
+        }
+        else
+        {
+            activeTab = "global";
+            await LoadLeaderboard("global");
+        }
+    }
+
+    private async Task LoadLeaderboard(string type)
+    {
+        leaderboard.Clear();
+
+        string url = type switch
+        {
+            "songs" => "api/leaderboard/songs",
+            "movies" => "api/leaderboard/movies",
+            _ => "api/leaderboard/global"
+        };
+
+        switch (type)
+        {
+            case "songs":
+                var songsResult = await Http.GetFromJsonAsync<List<SongsEntry>>(url);
+                if (songsResult is not null)
+                    leaderboard = songsResult.Select(e => (e.Username, e.Score)).ToList();
+                break;
+
+            case "movies":
+                var moviesResult = await Http.GetFromJsonAsync<List<MoviesEntry>>(url);
+                if (moviesResult is not null)
+                    leaderboard = moviesResult.Select(e => (e.Username, e.Score)).ToList();
+                break;
+
+            default:
+                var globalResult = await Http.GetFromJsonAsync<List<GlobalEntry>>(url);
+                if (globalResult is not null)
+                    leaderboard = globalResult.Select(e => (e.Username, e.Score)).ToList();
+                break;
+        }
+    }
+
+    private string GetTabClass(string tab) => tab == activeTab ? "ranking-tab active" : "ranking-tab";
+
+    public class GlobalEntry
+    {
+        public string Username { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonPropertyName("scoreTotal")]
+        public int Score { get; set; }
+    }
+
+    public class SongsEntry
+    {
+        public string Username { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonPropertyName("scoreSongs")]
+        public int Score { get; set; }
+    }
+
+    public class MoviesEntry
+    {
+        public string Username { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonPropertyName("scoreMovies")]
+        public int Score { get; set; }
+    }
+}

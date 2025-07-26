@@ -5,49 +5,64 @@
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
 
-<h2 class="text-2xl font-bold mb-4">🎯 Tryb Rankingowy — Film</h2>
+<h2 class="text-2xl font-bold mb-4">🎬 Tryb Rankingowy — Film</h2>
 
-@if (!Started)
-{
-    <p class="mb-4">Rozpoznaj film po kadrze!</p>
-    <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
-}
-else if (CurrentMovie != null)
-{
-    <img src="@ImageUrl" class="max-w-full max-h-[500px] mb-4 border rounded shadow" />
+<div class="film-game-fullscreen flex flex-col items-center justify-center min-h-screen text-center px-4">
 
-    @if (Started && !Answered)
+    @if (!Started)
     {
-        <div class="text-3xl font-mono font-bold text-center animate-pulse mt-4">
-            ⏳ @Countdown s
-        </div>
+        <p class="mb-4">Zgadnij tytuł filmu na podstawie zdjęcia!</p>
+        <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
     }
-
-    <div class="mt-4">
-        <input class="border p-2 w-full" placeholder="Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" />
-        @if (TitleSuggestions.Any())
-        {
-            <ul class="border bg-white shadow absolute z-10">
-                @foreach (var title in TitleSuggestions)
-                {
-                    <li @onclick="@(() => SelectSuggestion(title))" class="cursor-pointer hover:bg-gray-200 px-2 py-1">@title</li>
-                }
-            </ul>
-        }
-        <button class="bg-green-600 text-white px-4 py-2 mt-2 rounded" @onclick="SubmitGuess">Zatwierdź</button>
-    </div>
-
-    @if (Answered)
+    else if (CurrentMovie != null)
     {
-        <div class="mt-4 p-4 rounded shadow bg-gray-100">
-            <p class="font-bold text-lg whitespace-pre-line">@ResultMessage</p>
+        <div class="film-center-container">
+            <img src="@ImageUrl" class="film-image-preview" />
 
-            <div class="flex gap-4 mt-4">
-                <button class="bg-gray-500 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
-                <button class="bg-blue-600 text-white px-4 py-2 rounded" @onclick="StartGame">Dalej</button>
+            @if (Started && !Answered)
+            {
+                <div class="text-4xl font-mono font-bold text-center animate-pulse mt-2">
+                    ⏳ @Countdown s
+                </div>
+            }
+
+            <div class="film-input-wrapper-guess">
+                <input class="film-guess-input" placeholder="🎬 Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" disabled="@Answered" />
+
+                @if (TitleSuggestions.Any())
+                {
+                    <ul class="film-suggestions-list">
+                        @foreach (var title in TitleSuggestions)
+                        {
+                            <li @onclick="@(() => SelectSuggestion(title))">@title</li>
+                        }
+                    </ul>
+                }
+
+                <button class="film-submit-btn" @onclick="SubmitGuess" disabled="@Answered">
+                    ✅ Zatwierdź
+                </button>
             </div>
         </div>
+
     }
+</div>
+
+@if (Answered)
+{
+    <div id="film-result-block" class="film-result-block">
+        <p class="font-bold text-xl">@ResultMessage</p>
+
+        <div class="stats-summary mt-4">
+            <p><strong>⏱ Czas odpowiedzi:</strong> @Countdown sekund</p>
+            <p><strong>🎯 Trafność:</strong> @(ResultMessage.Contains("Brawo") ? "✔️ Trafione" : "❌ Nie trafione")</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-8 mt-8">
+            <button class="btn bg-gray-500" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
+            <button class="btn bg-blue-600" @onclick="StartGame">Dalej</button>
+        </div>
+    </div>
 }
 
 @code {
@@ -117,7 +132,6 @@ else if (CurrentMovie != null)
     protected async Task StartGame()
     {
         GameSessionId = Guid.NewGuid();
-
         Started = true;
         Answered = false;
         ResultMessage = "";
@@ -134,7 +148,7 @@ else if (CurrentMovie != null)
         }
     }
 
-    protected virtual async Task SubmitGuess()
+    protected async Task SubmitGuess()
     {
         if (CurrentMovie == null) return;
 
@@ -164,12 +178,14 @@ else if (CurrentMovie != null)
         Answered = true;
 
         ResultMessage = result!.Correct
-            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n"
-              + $"Twój łączny wynik: {result.TotalScore} pkt\n"
-              + $"Pozycja w rankingu: #{result.RankingPosition}"
-            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n"
-              + $"Twój wynik: {result.Score} pkt w {duration} sek\n"
-              + $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
+            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n" +
+              $"Twój łączny wynik: {result.TotalScore} pkt\n" +
+              $"Pozycja w rankingu: #{result.RankingPosition}"
+            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n" +
+              $"Twój wynik: {result.Score} pkt w {duration} sek\n" +
+              $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
+
+        await JS.InvokeVoidAsync("scrollToElement", "film-result-block");
     }
 
     [JSInvokable]

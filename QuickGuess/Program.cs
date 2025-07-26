@@ -104,11 +104,12 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("https://localhost:7003")
+        policy //.WithOrigins("https://localhost:7003")
+            .AllowAnyOrigin()
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials()
-            .SetIsOriginAllowed(_ => true);
+            .AllowAnyMethod();
+        //.AllowCredentials()
+        //.SetIsOriginAllowed(_ => true);
     });
 });
 

@@ -1,5 +1,6 @@
 ﻿@page "/gra-piosenka-ranking"
 @using Frontend.Services
+@using Frontend.Shared
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject AuthorizedHttpClient AuthHttp
@@ -7,49 +8,92 @@
 
 <h2 class="text-2xl font-bold mb-4">🎯 Tryb Rankingowy — Piosenka</h2>
 
-@if (!Started)
-{
-    <p class="mb-4">Czy jesteś gotowy na wyzwanie muzyczne?</p>
-    <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
-}
-else if (CurrentSong != null)
-{
-    <audio src="@AudioUrl" @ref="AudioRef"></audio>
+<div class="game-fullscreen flex flex-col items-center justify-center min-h-screen text-center px-4">
 
-    @if (Started && !Answered)
+
+    @if (!Started)
     {
-        <div class="text-3xl font-mono font-bold text-center animate-pulse mt-4">
-            ⏳ @Countdown s
-        </div>
+        <p class="mb-4">Czy jesteś gotowy na wyzwanie muzyczne?</p>
+        <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
     }
-
-    <div class="mt-4">
-        <input class="border p-2 w-full" placeholder="Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" />
-        @if (TitleSuggestions.Any())
-        {
-            <ul class="border bg-white shadow absolute z-10">
-                @foreach (var title in TitleSuggestions)
-                {
-                    <li @onclick="@(() => SelectSuggestion(title))" class="cursor-pointer hover:bg-gray-200 px-2 py-1">@title</li>
-                }
-            </ul>
-        }
-        <button class="bg-green-600 text-white px-4 py-2 mt-2 rounded" @onclick="SubmitGuess">Zatwierdź</button>
-    </div>
-
-    @if (Answered)
+    else if (CurrentSong != null)
     {
-        <div class="mt-4 p-4 rounded shadow bg-gray-100">
-            <p class="font-bold text-lg whitespace-pre-line">@ResultMessage</p>
+        <div class="flex flex-col items-center gap-6 w-full max-w-3xl mt-6">
 
-            <div class="flex gap-4 mt-4">
-                <button class="bg-gray-500 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
-                <button class="bg-blue-600 text-white px-4 py-2 rounded" @onclick="StartGame">Dalej</button>
+            <div class="volume-icon-wrapper">
+                <button @onclick="ToggleMute" class="volume-btn">
+                    <i class="fas @(Muted ? "fa-volume-mute" : "fa-volume-up")"></i>
+                </button>
+            </div>
+
+            <audio src="@AudioUrl" @ref="AudioRef" crossorigin="anonymous"></audio>
+
+            @if (!string.IsNullOrEmpty(AudioUrl))
+            {
+                <AudioVisualizer IsPlaying="@(Started && !Answered)" />
+            }
+
+            @if (Started && !Answered)
+            {
+                <div class="text-4xl font-mono font-bold text-center animate-pulse mt-2">
+                    ⏳ @Countdown s
+                </div>
+            }
+
+            <div class="input-wrapper-guess">
+                <input class="guess-input" placeholder="🎵 Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" disabled="@Answered" />
+                
+                @if (TitleSuggestions.Any())
+                {
+                    <ul class="suggestions-list">
+                        @foreach (var title in TitleSuggestions)
+                        {
+                            <li @onclick="@(() => SelectSuggestion(title))">@title</li>
+                        }
+                    </ul>
+                }
+
+                <button class="submit-btn right-btn" @onclick="SubmitGuess" disabled="@Answered">
+                    ✅ Zatwierdź
+                </button>
+
             </div>
         </div>
-    }
+    
 
+        @*@if (Answered)
+        {
+            <div id="result-block" class="mt-4 p-4 rounded shadow bg-gray-100">
+                <p class="font-bold text-lg whitespace-pre-line">@ResultMessage</p>
+
+                <div class="flex gap-4 mt-4">
+                    <button class="bg-gray-500 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
+                    <button class="bg-blue-600 text-white px-4 py-2 rounded" @onclick="StartGame">Dalej</button>
+                </div>
+            </div>
+        }*@
+    }
+</div>
+
+@if (Answered)
+{
+    <div id="result-block" class="result-block">
+        <p class="font-bold text-xl">@ResultMessage</p>
+
+        <div class="stats-summary mt-4">
+            <p><strong>⏱ Czas odpowiedzi:</strong> @Countdown sekund</p>
+            <p><strong>🎯 Trafność:</strong> @(ResultMessage.Contains("Brawo") ? "✔️ Trafione" : "❌ Nie trafione")</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-8 mt-8">
+            <button class="btn bg-gray-500" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
+            <button class="btn bg-blue-600" @onclick="StartGame">Dalej</button>
+        </div>
+    </div>
 }
+
+
+
 
 @code {
     protected class SongDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
@@ -75,13 +119,13 @@ else if (CurrentSong != null)
     private System.Timers.Timer? countdownTimer;
     private Guid GameSessionId = Guid.NewGuid();
     private bool AudioStarted = false;
-
+    private bool Muted = false;
 
     private void StartCountdown()
     {
         Countdown = 20;
 
-        countdownTimer?.Stop(); // zatrzymaj poprzedni
+        countdownTimer?.Stop();
         countdownTimer = new System.Timers.Timer(1000);
         countdownTimer.Elapsed += async (_, _) =>
         {
@@ -133,24 +177,21 @@ else if (CurrentSong != null)
             CurrentSong = songs[0];
             AudioStarted = false;
             AudioUrl = $"https://localhost:7236/api/media/song-audio/{CurrentSong.Id}";
-            await JS.InvokeVoidAsync("stopAudio", AudioRef); // zatrzymaj poprzedni
-            StateHasChanged(); // przerysuj komponent
-            await Task.Delay(100); // daj czas na przerysowanie
-
-            //await JS.InvokeVoidAsync("playAudio", AudioRef);
-
+            //AudioUrl = $"api/media/song-audio/{CurrentSong.Id}";
+            await JS.InvokeVoidAsync("stopAudio", AudioRef);
+            StateHasChanged();
+            await Task.Delay(100);
 
             StartTime = DateTime.Now;
             StartCountdown();
         }
     }
 
-
     protected virtual async Task SubmitGuess()
     {
         if (CurrentSong == null) return;
 
-        countdownTimer?.Stop(); // zatrzymaj licznik
+        countdownTimer?.Stop();
 
         var duration = (int)(DateTime.Now - StartTime).TotalSeconds;
 
@@ -178,19 +219,19 @@ else if (CurrentSong != null)
         await JS.InvokeVoidAsync("stopAudio", AudioRef);
 
         ResultMessage = result!.Correct
-            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n"
-              + $"Twój łączny wynik: {result.TotalScore} pkt\n"
-              + $"Pozycja w rankingu: #{result.RankingPosition}"
-            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n"
-              + $"Twój wynik: {result.Score} pkt w {duration} sek\n"
-              + $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
-    }
+            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n" +
+              $"Twój łączny wynik: {result.TotalScore} pkt\n" +
+              $"Pozycja w rankingu: #{result.RankingPosition}"
+            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n" +
+              $"Twój wynik: {result.Score} pkt w {duration} sek\n" +
+              $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
 
+        await JS.InvokeVoidAsync("scrollToElement", "result-block");
+    }
 
     [JSInvokable]
     public async Task TimeoutGuess(Guid sessionId)
     {
-        // ignoruj stary timeout
         if (sessionId != GameSessionId || Answered || !Started)
             return;
 
@@ -206,6 +247,8 @@ else if (CurrentSong != null)
         {
             AudioStarted = true;
 
+            await Task.Delay(200); 
+
             await JS.InvokeVoidAsync("playAudio", AudioRef);
 
             await JS.InvokeVoidAsync("startTimeout",
@@ -215,7 +258,7 @@ else if (CurrentSong != null)
                 GameSessionId,
                 20000);
         }
-    }
+    } 
 
     private string CleanGuess(string input)
     {
@@ -223,7 +266,6 @@ else if (CurrentSong != null)
         if (match.Success)
         {
             var cleaned = match.Groups[1].Value;
-            // jeśli jest "Artysta - Tytuł"
             if (cleaned.Contains(" - "))
                 return cleaned.Split(" - ")[1].Trim();
             return cleaned.Trim();
@@ -231,7 +273,9 @@ else if (CurrentSong != null)
         return input.Trim();
     }
 
-
-
-
+    private async Task ToggleMute()
+    {
+        Muted = !Muted;
+        await JS.InvokeVoidAsync(Muted ? "muteAudio" : "unmuteAudio", AudioRef);
+    }
 }
