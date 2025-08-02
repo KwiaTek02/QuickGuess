@@ -1,4 +1,27 @@
-﻿window.playAudio = (element) => {
+﻿function initAudioChainIfNeeded(audioElement) {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (!source) {
+        source = audioCtx.createMediaElementSource(audioElement);
+    }
+
+    if (!gainNode) {
+        gainNode = audioCtx.createGain();
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+    }
+
+    if (!analyser) {
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        gainNode.connect(analyser);
+    }
+}
+
+
+window.playAudio = (element) => {
     console.log("Element received:", element);
     if (element && typeof element.play === "function") {
         element.play().catch(err => console.error("Audio autoplay blocked:", err));
@@ -35,6 +58,7 @@ window.unmuteAudio = function (audioElement) {
 let audioCtx;
 let analyser;
 let source;
+let gainNode;
 let animationId;
 let visualizerInitialized = false;
 
@@ -49,16 +73,10 @@ window.initVisualizer = () => {
     }
 
     try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
+        initAudioChainIfNeeded(audio); // 🔧 użyj naszej funkcji
 
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
-
-        source = audioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
 
         const bars = [];
         for (let i = 0; i < 32; i++) {
@@ -69,7 +87,6 @@ window.initVisualizer = () => {
         function draw() {
             animationId = requestAnimationFrame(draw);
             analyser.getByteFrequencyData(dataArray);
-
             for (let i = 0; i < bars.length; i++) {
                 const val = dataArray[i];
                 const height = Math.max(4, (val / 255) * 50);
@@ -91,5 +108,28 @@ window.initVisualizer = () => {
         };
     } catch (err) {
         console.error("Error initializing visualizer:", err);
+    }
+};
+
+window.setAudioVolume = function (audioElement, volume) {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (!source && audioElement) {
+        source = audioCtx.createMediaElementSource(audioElement);
+    }
+
+    if (!gainNode) {
+        gainNode = audioCtx.createGain();
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+    }
+
+    if (gainNode) {
+        gainNode.gain.value = volume;
+        console.log("Volume set to:", volume);
+    } else {
+        console.warn("GainNode not initialized yet");
     }
 };
