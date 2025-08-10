@@ -34,17 +34,22 @@ namespace QuickGuess.Controllers
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
             string correctTitle;
+            string displayTitle = null!; // nowa zmienna
+
             if (type == "song")
             {
                 var song = await _db.Songs.FindAsync(request.ItemId);
                 if (song == null) return NotFound("Song not found");
                 correctTitle = song.Title;
+                displayTitle = $"{song.Artist} - {song.Title} ({song.ReleaseYear})";
             }
             else
             {
                 var movie = await _db.Movies.FindAsync(request.ItemId);
                 if (movie == null) return NotFound("Movie not found");
                 correctTitle = movie.Title;
+                // tu możesz też zrobić podobny format dla filmów
+                displayTitle = $"{movie.Title} ({movie.ReleaseYear})";
             }
 
             bool correct = string.Equals(request.GuessText.Trim(), correctTitle.Trim(), StringComparison.OrdinalIgnoreCase);
@@ -98,7 +103,9 @@ namespace QuickGuess.Controllers
                 Score = score,
                 TotalScore = totalScore,
                 RankingPosition = position,
-                CorrectTitle = correctTitle
+                CorrectTitle = correctTitle,
+                DisplayTitle = displayTitle
+
             });
 
         }
