@@ -1,25 +1,4 @@
-﻿function initAudioChainIfNeeded(audioElement) {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    if (!source) {
-        source = audioCtx.createMediaElementSource(audioElement);
-    }
-
-    if (!gainNode) {
-        gainNode = audioCtx.createGain();
-        source.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-    }
-
-    if (!analyser) {
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        gainNode.connect(analyser);
-    }
-}
-
+﻿
 
 window.playAudio = (element) => {
     console.log("Element received:", element);
@@ -61,75 +40,107 @@ let source;
 let gainNode;
 let animationId;
 let visualizerInitialized = false;
+let bars = [];
+let peaks = [];        
+let lastBarCount = 0;
 
-window.initVisualizer = () => {
-    if (visualizerInitialized) return;
-    visualizerInitialized = true;
 
+function initAudioChain(audioElement) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!source) source = audioCtx.createMediaElementSource(audioElement);
+    if (!gainNode) { gainNode = audioCtx.createGain(); source.connect(gainNode); }
+    if (!analyser) {
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.82;
+        analyser.minDecibels = -90;
+        analyser.maxDecibels = -10;
+        gainNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+    }
+}
+
+const USABLE_MAX_HZ = 14000;
+function buildLogBuckets(barCount, spectrumLength, sampleRate) {
+    const buckets = [];
+    const low = 3;
+
+    // Nyquist = sampleRate / 2
+    const nyquist = (sampleRate || 44100) / 2;
+    const maxHz = Math.min(USABLE_MAX_HZ, nyquist); // nie wyżej niż Nyquist
+    let high = Math.floor((maxHz / nyquist) * spectrumLength); // górny bin
+    high = Math.max(low + barCount, Math.min(high, spectrumLength)); // bezpieczeństwo
+
+    const edges = new Array(barCount + 1);
+    edges[0] = low;
+
+    for (let i = 1; i < barCount; i++) {
+        const t = i / barCount;
+        let idx = Math.round(low * Math.pow(high / low, t));
+        idx = Math.min(idx, high - 1);
+        edges[i] = Math.max(edges[i - 1] + 1, idx);
+    }
+    edges[barCount] = high;
+
+    for (let i = 0; i < barCount; i++) {
+        let a = edges[i], b = edges[i + 1];
+        if (b <= a) b = Math.min(high, a + 1);
+        buckets.push([a, b]);
+    }
+    return buckets;
+}
+
+window.initVisualizer = (barCount = 24) => {
     const audio = document.querySelector("audio");
-    if (!audio) {
-        console.warn("Audio element not found");
-        return;
-    }
-
-    try {
-        initAudioChainIfNeeded(audio); // 🔧 użyj naszej funkcji
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        const bars = [];
-        for (let i = 0; i < 32; i++) {
-            const el = document.getElementById(`bar-${i}`);
-            if (el) bars.push(el);
-        }
-
-        function draw() {
-            animationId = requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-            for (let i = 0; i < bars.length; i++) {
-                const val = dataArray[i];
-                const height = Math.max(4, (val / 255) * 50);
-                bars[i].style.height = `${height}px`;
-                bars[i].style.opacity = val > 20 ? "1" : "0.5";
-            }
-        }
-
-        window.startVisualizer = () => {
-            if (audioCtx.state === "suspended") {
-                audioCtx.resume();
-            }
-            draw();
-        };
-
-        window.stopVisualizer = () => {
-            if (animationId) cancelAnimationFrame(animationId);
-            bars.forEach(bar => bar.style.height = "4px");
-        };
-    } catch (err) {
-        console.error("Error initializing visualizer:", err);
-    }
+    if (!audio) return;
+    initAudioChain(audio);
+    bars = Array.from(document.querySelectorAll("#visualizer .bar"));
+    peaks = new Array(bars.length).fill(0);
 };
 
-window.setAudioVolume = function (audioElement, volume) {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+window.startVisualizer = () => {
+    if (!audioCtx || !analyser) return;
+    if (audioCtx.state === "suspended") audioCtx.resume();
 
-    if (!source && audioElement) {
-        source = audioCtx.createMediaElementSource(audioElement);
-    }
+    const freq = new Uint8Array(analyser.frequencyBinCount);
+    const buckets = buildLogBuckets(bars.length, freq.length, audioCtx.sampleRate);
 
-    if (!gainNode) {
-        gainNode = audioCtx.createGain();
-        source.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-    }
+    const maxPx = 100, minPx = 4, decay = 0.014;
 
-    if (gainNode) {
-        gainNode.gain.value = volume;
-        console.log("Volume set to:", volume);
-    } else {
-        console.warn("GainNode not initialized yet");
-    }
+    cancelAnimationFrame(animationId);
+    const draw = () => {
+        animationId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(freq);
+
+        for (let i = 0; i < bars.length; i++) {
+            const [a, b] = buckets[i];
+
+            // średnia energii w buckecie
+            let sum = 0;
+            for (let j = a; j < b; j++) sum += freq[j];
+            const denom = Math.max(1, b - a);
+            const avg = sum / denom;
+
+            // perceptualny tilt – lekko wzmacnia wyższe słupki
+            const hiBoost = 0.85 + 0.55 * Math.pow(i / (bars.length - 1 || 1), 1.15);
+
+            // wysokość w px (półlogarytmicznie) + minimalne tętno
+            const h = Math.max(minPx, Math.min(maxPx, Math.sqrt(avg / 255) * maxPx * hiBoost));
+
+            // czapka (peak cap) – łagodny opad
+            peaks[i] = Math.max(peaks[i] - maxPx * decay, h);
+
+            const el = bars[i];
+            el.style.setProperty('--h', `${h}px`);
+            el.style.setProperty('--p', `${peaks[i]}px`);
+        }
+    };
+    draw();
 };
+
+window.stopVisualizer = () => {
+    if (animationId) cancelAnimationFrame(animationId);
+    bars.forEach(el => { el.style.setProperty('--h', `4px`); el.style.setProperty('--p', `4px`); });
+};
+
+window.setAudioVolume = (audioElement, volume) => { initAudioChain(audioElement); gainNode.gain.value = volume; };

@@ -721,13 +721,79 @@ input:-webkit-autofill {
 }
 
 .audio-visualizer {
+    --bar-w: 4px; /* szerokoœæ paska */
+    --gap: 3px; /* odstêp */
+    --h: 6px; /* runtime: wysokoœæ (JS nadpisuje na elemencie) */
+    --p: 6px; /* runtime: peak cap (JS nadpisuje na elemencie) */
+
     display: flex;
-    justify-content: center;
     align-items: flex-end;
-    height: 60px;
-    gap: 2px;
-    margin-bottom: 1rem;
+    justify-content: center;
+    height: 110px; /* wiêcej miejsca na animacjê */
+    gap: var(--gap);
+    padding: .25rem .4rem;
+    margin-bottom: 0.5rem;
     pointer-events: none;
+    filter: drop-shadow(0 6px 24px rgba(0,0,0,.25));
+}
+
+    .audio-visualizer .bar {
+        position: relative;
+        width: var(--bar-w);
+        height: var(--h);
+        border-radius: 9999px;
+        background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 40%, #60a5fa 100%);
+        transition: height .08s linear, transform .08s linear, opacity .2s ease;
+        opacity: .95;
+        /* subtelny „glow” */
+        box-shadow: 0 0 16px rgba(56,189,248,.35);
+    }
+
+        /* „czapka” (peak cap) */
+        .audio-visualizer .bar::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: var(--p); /* JS */
+            height: 4px;
+            border-radius: 9999px;
+            background: #e0f2fe;
+            opacity: .9;
+            box-shadow: 0 0 12px rgba(96,165,250,.55);
+            transform: translateY(50%); /* lekki offset */
+        }
+
+        /* delikatne odbicie / refleks pod s³upkiem */
+        .audio-visualizer .bar::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -10px;
+            height: 10px;
+            border-radius: 9999px;
+            background: linear-gradient(180deg, rgba(96,165,250,.35), rgba(96,165,250,0));
+            filter: blur(6px);
+            opacity: .55;
+            pointer-events: none;
+        }
+
+/* responsywnie – gêœciej na szerokich ekranach */
+@media (min-width: 1200px) {
+    .audio-visualizer {
+        --bar-w: 5px;
+        --gap: 4px;
+        height: 130px;
+    }
+}
+
+@media (max-width: 520px) {
+    .audio-visualizer {
+        --bar-w: 3px;
+        --gap: 2px;
+        height: 90px;
+    }
 }
 
 .bar {
@@ -1174,6 +1240,8 @@ input:disabled {
 
 .base-timer__svg {
     transform: scaleX(-1);
+    width: 100%;
+    height: 100%;
 }
 
 .base-timer__circle {
@@ -1209,13 +1277,428 @@ input:disabled {
 
 .base-timer__label {
     position: absolute;
-    width: 120px;
-    height: 120px;
-    top: 0;
+    inset: 0; /* wype³nia ca³y .base-timer */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.75rem;
     font-weight: bold;
     color: white;
+}
+
+
+.result-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(2px);
+    z-index: 60;
+}
+
+.result-modal {
+    position: fixed;
+    top: 15vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(920px, 92vw);
+    background: rgba(15, 23, 42, 0.9);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    z-index: 70;
+    overflow: hidden;
+    animation: popIn .18s ease-out;
+}
+
+@keyframes popIn {
+    from {
+        transform: translateX(-50%) scale(0.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+    }
+}
+
+.result-header {
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr; /* by³o: 56px 1fr 56px */
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+    .result-header.win {
+        background: linear-gradient(90deg, rgba(34,197,94,.15), rgba(34,197,94,0));
+    }
+
+    .result-header.lose {
+        background: linear-gradient(90deg, rgba(239,68,68,.15), rgba(239,68,68,0));
+    }
+
+.result-emoji {
+    grid-column: 1; /* emoji po lewej */
+    font-size: 2.25rem;
+    line-height: 1;
+}
+
+.result-title {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.result-subtitle {
+    grid-column: 1 / -1; /* podtytu³ te¿ przez ca³¹ szerokoœæ */
+    margin: .25rem 0 0 0;
+    opacity: .9;
+    white-space: pre-line;
+    text-align: center;
+}
+
+.result-body {
+    padding: 1.25rem 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+@media (max-width: 720px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.stat {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: .85rem;
+    padding: .9rem 1rem;
+}
+
+.stat-label {
+    font-size: .85rem;
+    opacity: 0.8;
+    margin-bottom: .25rem;
+}
+
+.stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+.result-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem 1.5rem 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    min-height: 84px;
+}
+
+.result-close {
+    position: absolute;
+    top: .25rem;
+    right: .5rem;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 1.75rem;
+    cursor: pointer;
+    opacity: .8;
+}
+
+    .result-close:hover {
+        opacity: 1;
+    }
+
+
+.btn-modal {
+    appearance: none;
+    border: 0;
+    border-radius: 14px;
+    padding: 0.9rem 1.6rem;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: .2px;
+    color: #0b1220;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    transition: transform .12s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
+    cursor: pointer;
+    will-change: transform, box-shadow, filter;
+}
+
+    .btn-modal:hover {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 12px 28px rgba(0,0,0,.24);
+        filter: brightness(1.02);
+    }
+
+    .btn-modal:active {
+        transform: translateY(0) scale(0.99);
+        box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    }
+
+    /* warianty kolorystyczne */
+    .btn-modal.neutral {
+        background: linear-gradient(180deg, #ffffff, #f4f6fb);
+        color: #0f172a;
+        border: 1px solid rgba(255,255,255,.6);
+    }
+
+        .btn-modal.neutral:hover {
+            background: linear-gradient(180deg, #ffffff, #eef2ff);
+        }
+
+    .btn-modal.primary {
+        background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+        color: #001016;
+        border: 1px solid rgba(255,255,255,.25);
+    }
+
+        .btn-modal.primary:hover {
+            background: linear-gradient(180deg, #5cd1ff, #22b8f0);
+        }
+
+/* Profesjonalny slider g³oœnoœci */
+.volume-pro {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .55rem .85rem;
+    border-radius: 9999px;
+    background: rgba(15,23,42,.72);
+    border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+
+    .volume-pro.is-muted {
+        opacity: .85;
+    }
+
+.vol-btn {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #1f2937, #0b1220);
+    color: #e5e7eb;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 6px 16px rgba(0,0,0,.35);
+    transition: transform .12s ease, filter .2s ease;
+}
+
+    .vol-btn:hover {
+        filter: brightness(1.08);
+        transform: translateY(-1px);
+    }
+
+    .vol-btn:active {
+        transform: translateY(0);
+    }
+
+    .vol-btn i {
+        font-size: 1rem;
+    }
+
+/* tor z podwójnym t³em: wype³nienie i baza */
+.pro-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 180px;
+    height: 10px;
+    border-radius: 9999px;
+    background: linear-gradient(#38bdf8,#38bdf8) no-repeat, linear-gradient(90deg, rgba(255,255,255,.25), rgba(255,255,255,.10));
+    background-size: var(--fill, 0%) 100%, 100% 100%; 
+    outline: none;
+    cursor: pointer;
+    transition: background-size .15s ease;
+}
+
+    /* thumb – lekki glow i miêkka animacja */
+    .pro-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #ffffff 0 40%, #f3f4f6 45% 100%);
+        box-shadow: 0 0 0 3px rgba(56,189,248,.35), 0 4px 14px rgba(0,0,0,.35);
+        transition: transform .12s ease, box-shadow .2s ease;
+    }
+
+        .pro-range::-webkit-slider-thumb:hover {
+            transform: scale(1.06);
+        }
+
+        .pro-range::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 4px rgba(56,189,248,.5), 0 6px 16px rgba(0,0,0,.45);
+        }
+
+    .pro-range::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border: none;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #ffffff 0 40%, #f3f4f6 45% 100%);
+        box-shadow: 0 0 0 3px rgba(56,189,248,.35), 0 4px 14px rgba(0,0,0,.35);
+        transition: transform .12s ease, box-shadow .2s ease;
+    }
+
+    /* focus ring */
+    .pro-range:focus-visible {
+        box-shadow: 0 0 0 3px rgba(56,189,248,.35);
+        border-radius: 9999px;
+    }
+
+/* procent – neutralny, czytelny */
+.vol-value {
+    min-width: 3ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: #e5e7eb;
+    font-weight: 700;
+    opacity: .9;
+}
+
+/* HUD timera w lewym górnym rogu */
+.hud-timer {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 60;
+    padding: .35rem; /* delikatny „oddech” od krawêdzi */
+    border-radius: 16px;
+    
+    
+   
+    
+}
+
+    /* sam widget ko³a – bez marginesów, tak by siedzia³ równo w HUD */
+    .hud-timer .base-timer {
+        width: 108px;
+        height: 108px;
+    }
+
+/* w¹tek kolorów ju¿ masz; dok³adamy klasy stanowe + puls */
+.base-timer.is-warning .base-timer__path-remaining {
+    color: #f59e0b;
+}
+
+.base-timer.is-alert .base-timer__path-remaining {
+    color: #ef4444;
+}
+
+/* miêkkie pulsowanie ca³ego widgetu w koñcówce */
+@keyframes pulse-strong {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+    }
+
+    50% {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 10px rgba(239,68,68,.45));
+    }
+
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+    }
+}
+
+.base-timer.pulse {
+    animation: pulse-strong .9s ease-in-out infinite;
+    transform-origin: center;
+}
+
+/* czytelniejsza etykieta w ma³ym HUD */
+.hud-timer .base-timer__label {
+    font-size: 1.35rem;
+    letter-spacing: .5px;
+
+}
+
+/* szacunek dla preferencji u¿ytkownika */
+@media (prefers-reduced-motion: reduce) {
+    .base-timer.pulse {
+        animation: none;
+    }
+}
+
+
+/* Wiêkszy timer w HUD */
+.hud-timer--xl .base-timer {
+    width: 220px; /* by³o 108px */
+    height: 220px; /* by³o 108px */
+    margin-left: 100px;
+    margin-top: 100px;
+}
+
+/* grubszy „ring” ¿eby dobrze wygl¹da³ przy wiêkszym rozmiarze */
+.hud-timer--xl .base-timer__path-elapsed,
+.hud-timer--xl .base-timer__path-remaining {
+    stroke-width: 9px; /* by³o 10px */
+}
+
+/* wiêksza, czytelniejsza liczba */
+.hud-timer--xl .base-timer__label {
+    font-size: 2.25rem; /* by³o ~1.35rem w HUD */
+    letter-spacing: .5px;
+}
+
+/* (opcjonalnie) na mniejszych ekranach delikatnie zmniejsz */
+@media (max-width: 640px) {
+    .hud-timer--xl .base-timer {
+        width: 150px;
+        height: 150px;
+    }
+
+    .hud-timer--xl .base-timer__label {
+        font-size: 1.9rem;
+    }
+}
+/* Sta³y tytu³ gry na samej górze */
+.game-title {
+    position: fixed;
+    top: .75rem; /* jeœli masz pasek nawigacji wy¿szy – zwiêksz np. do 3.5rem */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 80;
+    font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+    font-weight: 800;
+    color: #fff;
+    padding: .35rem .9rem;
+    border-radius: 9999px;
+    background: rgba(15,23,42,.45);
+    border: 1px solid rgba(255,255,255,.16);
+    backdrop-filter: blur(6px);
+    text-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+
+/* ¿eby treœæ nie wchodzi³a pod tytu³ */
+.game-fullscreen.has-fixed-title {
+    padding-top: 6rem; /* dostosuj, jeœli tytu³/pasek nawigacji zajmuje wiêcej miejsca */
 }

@@ -6,10 +6,10 @@
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
 
-<h2 class="text-2xl font-bold mb-4">🎯 Tryb Rankingowy — Piosenka</h2>
 
 <div class="game-fullscreen flex flex-col items-center justify-center min-h-screen text-center px-4">
-
+    
+    <h1 class="game-title">🎯 Jaka To Piosenka?</h1>
 
     @if (!Started)
     {
@@ -20,10 +20,21 @@
     {
         <div class="flex flex-col items-center gap-6 w-full max-w-3xl mt-6">
 
-            <div class="volume-slider-container">
-                <i class="fas fa-volume-up volume-icon"></i>
-                <input type="range" min="0" max="1" step="0.01" @oninput="OnVolumeChanged" class="volume-slider" />
+            <div class="volume-pro @(Muted ? "is-muted" : "")" style="--fill:@($"{Volume*100}%")">
+                <button class="vol-btn" @onclick="ToggleMute" aria-label="Wycisz / Włącz dźwięk" title="Wycisz / Włącz">
+                    <i class="@VolumeIcon"></i>
+                </button>
+
+                <input type="range"
+                       class="pro-range"
+                       min="0" max="100" step="1"
+                       @bind-value="VolumeP"
+                       @bind-value:event="oninput"
+                       style="--fill:@($"{VolumeP}%")" />
+
+                <span class="vol-value">@VolumeP%</span>
             </div>
+
 
             <audio src="@AudioUrl" @ref="AudioRef" crossorigin="anonymous"></audio>
 
@@ -34,34 +45,94 @@
 
             @if (Started && !Answered)
             {
-                <div id="base-timer-container" class="circle-timer">
-                    <div id="base-timer" class="base-timer">
-                        <svg class="base-timer__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <div class="hud-timer hud-timer--xl" aria-live="polite">
+                    <div id="base-timer" class="base-timer" role="timer" aria-label="Pozostały czas">
+                        <svg class="base-timer__svg" viewBox="0 0 100 100">
                             <g class="base-timer__circle">
                                 <circle class="base-timer__path-elapsed" cx="50" cy="50" r="45"></circle>
-                                <path
-                                    id="base-timer-path-remaining"
-                                    stroke-dasharray="283"
-                                    class="base-timer__path-remaining green"
-                                    d="
-                      M 50, 50
-                      m -45, 0
-                      a 45,45 0 1,0 90,0
-                      a 45,45 0 1,0 -90,0
-                    "
-                                ></path>
+                                <path id="base-timer-path-remaining" stroke-dasharray="283"
+                                      class="base-timer__path-remaining green"
+                                      d="M 50, 50 m -45, 0 a 45,45 0 1,0 90,0 a 45,45 0 1,0 -90,0">
+                                </path>
                             </g>
                         </svg>
                         <span id="base-timer-label" class="base-timer__label">0:20</span>
                     </div>
                 </div>
-
-
             }
 
-            <div class="input-wrapper-guess">
-                <input class="guess-input" placeholder="🎵 Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" disabled="@Answered" />
-                
+            @* === OKNO WYNIKU NAD INPUTEM === *@
+            @if (Answered)
+            {
+
+                <div class="result-modal" role="dialog" aria-modal="true">
+                    <div class="result-header @(LastGuessCorrect ? "win" : "lose")">
+                        @*<span class="result-emoji">@((LastGuessCorrect) ? "🎉" : "❌")</span>*@
+                        <h3 class="result-title">
+                            @((LastGuessCorrect) ? "🎉Udało ci się!🎉" : "❌Niestety nie tym razem!❌")
+                        </h3>
+                        <p class="result-subtitle">@ResultMessage</p>
+                    </div>
+
+                    <div class="result-body">
+                        <div class="stats-grid">
+                            <div class="stat">
+                                <div class="stat-label">⏱ Czas odpowiedzi</div>
+                                <div class="stat-value">@LastAnswerDuration s</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">🏅 Punkty za rundę</div>
+                                <div class="stat-value">@LastRoundPoints</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">🏆 Pozycja w rankingu</div>
+                                <div class="stat-value">#@PlayerStats?.RankingPosition</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">📈 % wygranych</div>
+                                <div class="stat-value">@($"{PlayerStats?.WinRate:P0}")</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">🎮 Gier (ranking)</div>
+                                <div class="stat-value">@PlayerStats?.Games</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">✔️ Trafionych</div>
+                                <div class="stat-value">@PlayerStats?.Correct</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">❌ Nietrafionych</div>
+                                <div class="stat-value">@PlayerStats?.Incorrect</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">⚡ Najszybsza odpowiedź</div>
+                                <div class="stat-value">@((PlayerStats?.BestTimeSec ?? 0)) s</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">⏳ Średni czas</div>
+                                <div class="stat-value">@($"{(PlayerStats?.AvgTimeSec ?? 0):0.0} s")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-actions">
+                        <button class="btn-modal neutral" @onclick='() => Navigation.NavigateTo("/panel")'>
+                            Wróć do panelu
+                        </button>
+                        <button class="btn-modal primary" @onclick="StartGame">
+                            Dalej (Enter)
+                        </button>
+                    </div>
+
+                    <button class="result-close" title="Zamknij (Esc)"
+                            @onclick='() => Navigation.NavigateTo("/panel")'>×</button>
+                </div>
+            }
+
+            <div class="input-wrapper-guess" id="guess-wrapper">
+                <input class="guess-input" placeholder="🎵 Zgadnij tytuł..."
+                       @bind="Guess" @oninput="OnInput" disabled="@Answered" />
+
                 @if (TitleSuggestions.Any())
                 {
                     <ul class="suggestions-list">
@@ -72,49 +143,21 @@
                     </ul>
                 }
 
-                <button class="submit-btn right-btn" @onclick="SubmitGuess" disabled="@Answered">
-                    ✅ Zatwierdź
-                </button>
-
+                <button class="submit-btn right-btn" @onclick="SubmitGuess" disabled="@Answered">✅ Zatwierdź</button>
             </div>
         </div>
-    
-
-        @*@if (Answered)
-        {
-            <div id="result-block" class="mt-4 p-4 rounded shadow bg-gray-100">
-                <p class="font-bold text-lg whitespace-pre-line">@ResultMessage</p>
-
-                <div class="flex gap-4 mt-4">
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
-                    <button class="bg-blue-600 text-white px-4 py-2 rounded" @onclick="StartGame">Dalej</button>
-                </div>
-            </div>
-        }*@
     }
 </div>
 
-@if (Answered)
-{
-    <div id="result-block" class="result-block">
-        <p class="font-bold text-xl">@ResultMessage</p>
 
-        <div class="stats-summary mt-4">
-            <p><strong>⏱ Czas odpowiedzi:</strong> @Countdown sekund</p>
-            <p><strong>🎯 Trafność:</strong> @(ResultMessage.Contains("Brawo") ? "✔️ Trafione" : "❌ Nie trafione")</p>
-        </div>
 
-        <div class="flex flex-wrap justify-center gap-8 mt-8">
-            <button class="btn bg-gray-500" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
-            <button class="btn bg-blue-600" @onclick="StartGame">Dalej</button>
-        </div>
-    </div>
-}
 
 
 
 
 @code {
+
+
     protected class SongDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
     protected class GuessResult
     {
@@ -123,8 +166,19 @@
         public int TotalScore { get; set; }
         public int RankingPosition { get; set; }
         public string CorrectTitle { get; set; } = "";
+        public string? DisplayTitle { get; set; } 
     }
-
+    private double Volume = 0.8; // 0..1
+    private int VolumePercent => (int)Math.Round(Volume * 100);
+    private string VolumeIcon =>
+        (Muted || Volume <= 0.001) ? "fas fa-volume-mute"
+        : (Volume < 0.34) ? "fas fa-volume-off"
+        : (Volume < 0.67) ? "fas fa-volume-down"
+        : "fas fa-volume-up";
+    private bool LastGuessCorrect;
+    private int LastAnswerDuration;
+    private PlayerSongStats? PlayerStats;
+    private int LastRoundPoints;
     protected SongDto? CurrentSong;
     protected string AudioUrl = "";
     protected ElementReference AudioRef;
@@ -149,8 +203,38 @@
         $"transition:stroke-dashoffset 0.1s linear, stroke 0.3s;";
 
 
+    public class PlayerSongStats
+    {
+        public int Games { get; set; }
+        public int Correct { get; set; }
+        public int Incorrect { get; set; }
+        public double WinRate { get; set; }
+        public int RankingPosition { get; set; }
+        public int BestTimeSec { get; set; }
+        public double AvgTimeSec { get; set; }
+        public int TotalScore { get; set; }
+    }
 
     private double Circumference => 2 * Math.PI * Radius;
+
+    private int _volumeP = 80;               // 0..100
+    private int VolumeP
+    {
+        get => _volumeP;
+        set
+        {
+            if (_volumeP == value) return;
+            _volumeP = value;
+
+            Volume = Math.Clamp(value / 100.0, 0, 1);   // 0..1
+            if (!Muted)
+            {
+                // Nie wymuszamy renderu; tylko podnosimy głośność w audio
+                _ = JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
+            }
+            // Uwaga: nie wywołuj StateHasChanged tutaj – Blazor i tak zrobi rerender po oninput
+        }
+    }
 
 
     private async void StartCountdown()
@@ -168,6 +252,8 @@
         }
 
     }
+
+    
 
     /*private void StartCountdown()
     {
@@ -231,11 +317,13 @@
     protected async Task StartGame()
     {
         GameSessionId = Guid.NewGuid();
-
         Started = true;
         Answered = false;
         ResultMessage = "";
         Guess = "";
+        PlayerStats = null;
+        LastAnswerDuration = 0;
+        LastGuessCorrect = false;
 
         var songs = await Http.GetFromJsonAsync<List<SongDto>>("/api/songs/random?count=1");
         if (songs?.Count > 0)
@@ -255,7 +343,9 @@
 
     protected virtual async Task SubmitGuess()
     {
-        if (CurrentSong == null) return;
+        if (CurrentSong == null || Answered) return; // zabezpieczenie przed ponownym kliknięciem
+
+        Answered = true; // BLOKUJ od razu
 
         countdownTimer?.Stop();
         progressTimer?.Stop();
@@ -285,17 +375,26 @@
         var result = await res.Content.ReadFromJsonAsync<GuessResult>();
         Answered = true;
 
+        LastAnswerDuration = duration;
+        LastGuessCorrect = result!.Correct;
+        LastRoundPoints = result.Score;
+
         await JS.InvokeVoidAsync("stopAudio", AudioRef);
 
         ResultMessage = result!.Correct
-            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n" +
-              $"Twój łączny wynik: {result.TotalScore} pkt\n" +
-              $"Pozycja w rankingu: #{result.RankingPosition}"
-            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n" +
-              $"Twój wynik: {result.Score} pkt w {duration} sek\n" +
-              $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
+            ? $"{result.DisplayTitle ?? result.CorrectTitle}"
+            : $"{result.DisplayTitle ?? result.CorrectTitle}";
 
-        await JS.InvokeVoidAsync("scrollToElement", "result-block");
+
+        //await JS.InvokeVoidAsync("scrollToElement", "result-block");
+
+        try
+        {
+            PlayerStats = await client.GetFromJsonAsync<PlayerSongStats>("/api/stats/me/song-ranking");
+        }
+        catch { /* opcjonalnie: log */ }
+
+
     }
 
     [JSInvokable]
@@ -344,11 +443,11 @@
         return input.Trim();
     }
 
-    private async Task ToggleMute()
+    /*private async Task ToggleMute()
     {
         Muted = !Muted;
         await JS.InvokeVoidAsync(Muted ? "muteAudio" : "unmuteAudio", AudioRef);
-    }
+    }*/
 
     private async Task OnVolumeChanged(ChangeEventArgs e)
     {
@@ -369,6 +468,29 @@
             return "#f59e0b"; // orange
         else
             return "#ef4444"; // red
+    }
+
+    private async Task OnVolumeInput(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var p))
+        {
+            Volume = Math.Clamp(p / 100.0, 0, 1);
+            if (!Muted)
+                await JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
+            StateHasChanged(); // aktualizuje --fill i ikonę
+        }
+    }
+
+// Drobna korekta ToggleMute: po włączeniu dźwięku ustaw od razu głośność
+    private async Task ToggleMute()
+    {
+        Muted = !Muted;
+        if (Muted)
+            await JS.InvokeVoidAsync("muteAudio", AudioRef);
+        else
+            await JS.InvokeVoidAsync("unmuteAudio", AudioRef);
+        if (!Muted)
+            await JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
     }
 
 }

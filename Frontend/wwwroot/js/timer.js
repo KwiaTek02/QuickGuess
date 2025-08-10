@@ -28,42 +28,46 @@ const Timer = (function () {
         return `${minutes}:${seconds}`;
     }
 
-    function setRemainingPathColor(timeLeft) {
-        const { alert, warning, info } = COLOR_CODES;
-        const path = document.getElementById("base-timer-path-remaining");
-        if (!path) return;
 
-        if (timeLeft <= alert.threshold) {
-            path.classList.remove(warning.color);
-            path.classList.add(alert.color);
-        } else if (timeLeft <= warning.threshold) {
-            path.classList.remove(info.color);
-            path.classList.add(warning.color);
+    function applyStateClasses() {
+        const base = document.getElementById("base-timer");
+        const path = document.getElementById("base-timer-path-remaining");
+        if (!base || !path) return;
+
+        // reset
+        base.classList.remove("is-warning", "is-alert", "pulse");
+        path.classList.remove("orange", "red");
+        path.classList.add("green");
+
+        if (timeLeft <= COLOR_CODES.warning.threshold) {
+            base.classList.add("is-warning");
+            path.classList.remove("green");
+            path.classList.add("orange");
+        }
+        if (timeLeft <= COLOR_CODES.alert.threshold) {
+            base.classList.remove("is-warning");
+            base.classList.add("is-alert", "pulse");  // pulsowanie w końcówce
+            path.classList.remove("orange");
+            path.classList.add("red");
         }
     }
 
     function calculateTimeFraction() {
-        const rawTimeFraction = timeLeft / timeLimit;
-        return rawTimeFraction - (1 / timeLimit) * (1 - rawTimeFraction);
+        const raw = timeLeft / timeLimit;
+        return raw - (1 / timeLimit) * (1 - raw);
     }
 
     function setCircleDasharray() {
-        const circleDasharray = `${(
-            calculateTimeFraction() * FULL_DASH_ARRAY
-        ).toFixed(0)} 283`;
+        const arr = `${(calculateTimeFraction() * FULL_DASH_ARRAY).toFixed(0)} 283`;
         const path = document.getElementById("base-timer-path-remaining");
-        if (path) {
-            path.setAttribute("stroke-dasharray", circleDasharray);
-        }
+        if (path) path.setAttribute("stroke-dasharray", arr);
     }
 
     function updateUI() {
         const label = document.getElementById("base-timer-label");
-        if (label) {
-            label.innerHTML = formatTime(timeLeft);
-        }
+        if (label) label.textContent = formatTime(timeLeft);
         setCircleDasharray();
-        setRemainingPathColor(timeLeft);
+        applyStateClasses();
     }
 
     function onTimesUp() {
@@ -81,17 +85,15 @@ const Timer = (function () {
             timeLimit = duration || 20;
             timePassed = 0;
             timeLeft = timeLimit;
-            updateUI();
 
+            updateUI();
             if (timerInterval) clearInterval(timerInterval);
 
             timerInterval = setInterval(() => {
                 timePassed += 1;
                 timeLeft = timeLimit - timePassed;
                 updateUI();
-                if (timeLeft <= 0) {
-                    onTimesUp();
-                }
+                if (timeLeft <= 0) onTimesUp();
             }, 1000);
         },
         stop: function () {
@@ -100,5 +102,4 @@ const Timer = (function () {
         }
     };
 })();
-
 window.Timer = Timer;
