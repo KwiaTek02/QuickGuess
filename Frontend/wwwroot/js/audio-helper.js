@@ -98,6 +98,35 @@ window.initVisualizer = (barCount = 24) => {
     peaks = new Array(bars.length).fill(0);
 };
 
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpColor(c1, c2, t) {
+    const r = Math.round(lerp(c1[0], c2[0], t));
+    const g = Math.round(lerp(c1[1], c2[1], t));
+    const b = Math.round(lerp(c1[2], c2[2], t));
+    return { rgb: `rgb(${r},${g},${b})`, rgba: `rgba(${r},${g},${b},0.45)` };
+}
+
+// kolory jak na pasku, od niskich do wysokich
+const HEIGHT_STOPS = [
+    { t: 0.00, c: [255, 255, 255] }, // #ffffff
+    { t: 0.20, c: [255, 228, 0] }, // #ffe400
+    { t: 0.40, c: [57, 255, 20] }, // #39ff14
+    { t: 0.60, c: [56, 189, 248] }, // #38bdf8
+    { t: 0.80, c: [255, 32, 151] }, // #ff2097
+    { t: 1.00, c: [255, 255, 255] }  // #ffffff
+];
+
+function colorAtHeight(t) {
+    for (let i = 0; i < HEIGHT_STOPS.length - 1; i++) {
+        const a = HEIGHT_STOPS[i], b = HEIGHT_STOPS[i + 1];
+        if (t >= a.t && t <= b.t) {
+            const u = (t - a.t) / (b.t - a.t || 1);
+            return lerpColor(a.c, b.c, u);
+        }
+    }
+    return { rgb: 'rgb(255,255,255)', rgba: 'rgba(255,255,255,0.45)' };
+}
+
 window.startVisualizer = () => {
     if (!audioCtx || !analyser) return;
     if (audioCtx.state === "suspended") audioCtx.resume();
@@ -115,24 +144,29 @@ window.startVisualizer = () => {
         for (let i = 0; i < bars.length; i++) {
             const [a, b] = buckets[i];
 
-            // średnia energii w buckecie
+            // średnia energii
             let sum = 0;
             for (let j = a; j < b; j++) sum += freq[j];
             const denom = Math.max(1, b - a);
             const avg = sum / denom;
 
-            // perceptualny tilt – lekko wzmacnia wyższe słupki
             const hiBoost = 0.85 + 0.55 * Math.pow(i / (bars.length - 1 || 1), 1.15);
-
-            // wysokość w px (półlogarytmicznie) + minimalne tętno
             const h = Math.max(minPx, Math.min(maxPx, Math.sqrt(avg / 255) * maxPx * hiBoost));
 
-            // czapka (peak cap) – łagodny opad
             peaks[i] = Math.max(peaks[i] - maxPx * decay, h);
 
             const el = bars[i];
             el.style.setProperty('--h', `${h}px`);
             el.style.setProperty('--p', `${peaks[i]}px`);
+
+            // >>> KOLOR Z WYSOKOŚCI (0..1)
+            const tNorm = (h - minPx) / (maxPx - minPx); // 0..1
+            const col = colorAtHeight(Math.max(0, Math.min(1, tNorm)));
+
+            // ustaw JEDEN kolor dla całego słupka (nadpisuje wszystko)
+            el.style.background = col.rgb;
+            // pasujący glow (poświata)
+            el.style.boxShadow = `0 0 16px ${col.rgba}`;
         }
     };
     draw();
