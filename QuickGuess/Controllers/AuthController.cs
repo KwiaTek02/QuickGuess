@@ -37,7 +37,7 @@ namespace QuickGuess.Controllers
 
             // Produkcyjny adres podstawowy – nie używamy localhost w mailach
             _appBaseUrl = config["App:BaseUrl"] ?? "https://localhost:7236";
-            _appBaseUrlFrontend = config["App:BaseUrl"] ?? "https://localhost:7003";
+            _appBaseUrlFrontend = config["App:FrontendBaseUrl"] ?? "https://localhost:7003";
 
             _smtpHost = config["Smtp:Host"] ?? "smtp.gmail.com";
             _smtpPort = int.TryParse(config["Smtp:Port"], out var p) ? p : 587;
@@ -226,7 +226,8 @@ namespace QuickGuess.Controllers
 
         private async Task SendResetEmail(string email, string token)
         {
-            var resetUrl = $"{_appBaseUrl}/reset-password?token={Uri.EscapeDataString(token)}";
+            // ← kierujemy na frontend
+            var resetUrl = $"{_appBaseUrlFrontend}/reset-password?token={Uri.EscapeDataString(token)}";
 
             string subject = $"{_brandName} — Reset hasła";
             string preheader = "Zmień swoje hasło jednym kliknięciem.";

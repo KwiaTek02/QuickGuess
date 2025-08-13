@@ -2,6 +2,7 @@
 @using Frontend.Services
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
+@inject HttpClient Http
 
 <div class="fullscreen-bg">
     <div class="login-card enhanced">
@@ -23,9 +24,9 @@
         </div>
 
         <div class="auth-links left-align">
-            <a href="#">Zapomniałeś hasła?</a>
+            <a href="/forgot-password">Zapomniałeś hasła?</a>
         </div>
-1
+
         <button @onclick="LoginUser" class="btn login-btn">Zaloguj się</button>
 
         <div class="google-btn-wrapper">
@@ -59,4 +60,5 @@
             Navigation.NavigateTo("/panel");
         }
     }
+
 }
