@@ -4,28 +4,60 @@
 @inject IJSRuntime JS
 @inject AuthState AuthState
 
-    <nav class="nav-bar">
-        <div class="logo" @onclick='() => Navigation.NavigateTo("/")'>
-            🎧 QuickGuess
-        </div>
-        <div class="nav-actions">
-            @if (IsLoggedIn)
-            {
-                <span class="username">Witaj, @FullName</span>
-                <button class="btn logout" @onclick="Logout">Wyloguj się</button>
-            }
-            else
-            {
-                <button class="btn login" @onclick='() => Navigation.NavigateTo("/login")'>Zaloguj się</button>
-                <button class="btn register" @onclick='() => Navigation.NavigateTo("/register")'>Zarejestruj się</button>
-            }
-        </div>
-    </nav>
+<nav class="nav-bar">
+    <div class="logo" @onclick='() => Navigation.NavigateTo("/")'>
+        🎧 QuickGuess
+    </div>
 
+    <div class="nav-actions">
+        @if (IsLoggedIn)
+        {
+            <span class="username">Witaj, @FullName</span>
+
+            <div class="account-menu @(IsMenuOpen ? "is-open" : "")"
+                 @onmouseenter="ShowMenu"
+                 @onmouseleave="HideMenu">
+
+                <button class="btn account-btn" @onclick="ToggleMenu">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Moje konto</span>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </button>
+
+                <div class="account-dropdown @(IsMenuOpen ? "open" : null)">
+                    <div class="dd-head-gradient"></div>
+
+                    <button class="dd-item" @onclick="GoProfile">
+                        <i class="bi bi-person"></i>
+                        Mój profil
+                    </button>
+
+                    <button class="dd-item" @onclick="GoReset">
+                        <i class="bi bi-shield-lock"></i>
+                        Resetuj hasło
+                    </button>
+
+                    <div class="dd-divider"></div>
+
+                    <button class="dd-item danger" @onclick="Logout">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Wyloguj się
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <button class="btn login" @onclick='() => Navigation.NavigateTo("/login")'>Zaloguj się</button>
+            <button class="btn register" @onclick='() => Navigation.NavigateTo("/register")'>Zarejestruj się</button>
+        }
+    </div>
+</nav>
 
 @code {
     private string? FullName;
     private bool IsLoggedIn;
+    private bool IsMenuOpen;
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,13 +81,30 @@
         else
         {
             IsLoggedIn = false;
+            IsMenuOpen = false;
         }
+    }
+
+    private void ShowMenu() => IsMenuOpen = true;
+    private void HideMenu() => IsMenuOpen = false;
+    private void ToggleMenu() => IsMenuOpen = !IsMenuOpen;
+
+    // „Na razie nic nie robią” – zostawiam puste nawigacje /
+    private void GoProfile()
+    {
+        // TODO: Navigation.NavigateTo("/profile");
+    }
+
+    private void GoReset()
+    {
+        // TODO: Navigation.NavigateTo("/account/reset");
     }
 
     private async Task Logout()
     {
         await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "authUser");
+        IsMenuOpen = false;
         AuthState.NotifyAuthenticationChanged();
         Navigation.NavigateTo("/login", true);
     }

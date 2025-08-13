@@ -175,11 +175,11 @@ code {
     justify-content: space-between;
     align-items: center;
     backdrop-filter: blur(6px);
-    z-index: 1;
+    z-index: 100;
     background-color: rgba(15, 15, 15, 0.95);
     border-bottom-left-radius: 2.5rem;
     border-bottom-right-radius: 2.5rem;
-    overflow: hidden;
+    overflow: visible;
     font-size: 1.25rem; /* Wiêksza czcionka ca³ego paska */
 }
 
@@ -1698,4 +1698,133 @@ input:disabled {
 /* ¿eby treœæ nie wchodzi³a pod tytu³ */
 .game-fullscreen.has-fixed-title {
     padding-top: 6rem; /* dostosuj, jeœli tytu³/pasek nawigacji zajmuje wiêcej miejsca */
+}
+
+/* === Menu konta w navbarze === */
+.account-menu {
+    position: relative;
+}
+    .account-menu::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 100%;
+        height: 12px; /* tyle ile odstêp do dropdowna */
+        /* pointer-events domyœlnie 'auto', dziêki czemu :hover siê utrzymuje */
+    }
+
+.account-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    background: linear-gradient(180deg, #1f2937, #0b1220);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 9999px;
+    padding: .6rem 1rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 8px 20px rgba(0,0,0,.35);
+}
+
+    .account-btn .chevron {
+        font-size: .9rem;
+        opacity: .8;
+        transition: transform .18s ease;
+    }
+
+.account-menu:hover .account-btn .chevron,
+.account-dropdown.open ~ .chevron {
+    transform: rotate(180deg);
+}
+
+.account-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 12px);
+    width: 240px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(8px);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.6);
+    overflow: hidden;
+    z-index: 120;
+    /* animacja otwierania */
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+    pointer-events: none;
+    transition: opacity .15s ease, transform .18s ease;
+}
+
+/* poka¿ na hover (desktop) */
+.account-menu:hover .account-dropdown {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+/* poka¿ na klik (mobile) */
+.account-dropdown.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.dd-head-gradient {
+    height: 6px;
+    background: linear-gradient(90deg,#ffffff,#ffe400,#22c55e,#38bdf8,#ff2097,#ffffff);
+}
+
+.dd-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .85rem 1rem;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background .15s ease, color .15s ease;
+}
+
+    .dd-item i {
+        width: 1.1rem;
+        text-align: center;
+        opacity: .95;
+    }
+
+    .dd-item:hover {
+        background: rgba(255,255,255,.06);
+    }
+
+    .dd-item.danger {
+        color: #fecaca; /* jasnoczerwony tekst */
+    }
+
+        .dd-item.danger:hover {
+            background: rgba(239,68,68,.12);
+            color: #ffffff;
+        }
+
+.dd-divider {
+    height: 1px;
+    margin: .15rem 0;
+    background: linear-gradient(90deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+}
+
+.account-menu:hover .account-dropdown,
+.account-menu.is-open .account-dropdown,
+.account-menu:focus-within .account-dropdown {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* strza³ka do góry gdy otwarte */
+.account-menu.is-open .chevron,
+.account-menu:hover .chevron {
+    transform: rotate(180deg);
 }
