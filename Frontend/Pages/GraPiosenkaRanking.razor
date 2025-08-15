@@ -7,14 +7,27 @@
 @inject HttpClient Http
 
 
-<div class="game-fullscreen flex flex-col items-center justify-center min-h-screen text-center px-4">
-    
+<div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
     <h1 class="game-title">🎯 Jaka To Piosenka?</h1>
 
     @if (!Started)
     {
-        <p class="mb-4">Czy jesteś gotowy na wyzwanie muzyczne?</p>
-        <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
+        <section class="song-hero">
+            <div class="song-hero__chip">
+                <i class="fas fa-bolt"></i>
+                Tryb rankingowy
+            </div>
+
+            <h2 class="song-hero__title">Jaka To Piosenka?</h2>
+            <p class="song-hero__subtitle">Czy jesteś gotowy na wyzwanie muzyczne?</p>
+
+            <button class="btn-hero" @onclick="StartGame">
+                <span class="btn-hero__glow"></span>
+                <i class="fas fa-play"></i>
+                <span>Start</span>
+                <kbd>Enter</kbd>
+            </button>
+        </section>
     }
     else if (CurrentSong != null)
     {

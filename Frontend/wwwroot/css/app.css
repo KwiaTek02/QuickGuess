@@ -984,7 +984,7 @@ input:disabled {
 }
 
 .submit-btn {
-    margin-top: 10rem;
+    margin-top: 1.25rem;
 }
 
 .volume-btn {
@@ -1827,4 +1827,199 @@ input:disabled {
 .account-menu.is-open .chevron,
 .account-menu:hover .chevron {
     transform: rotate(180deg);
+}
+
+
+/* === Start screen (Piosenka) === */
+.game-fullscreen.is-start .game-title {
+    display: none;
+}
+
+.song-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 3rem 2rem;
+    max-width: 900px;
+    width: 100%;
+    background: rgba(15,23,42,0.72);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+}
+
+    .song-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(1200px 300px at 50% -10%, rgba(56,189,248,.20), rgba(255,255,255,0) 60%);
+    }
+
+.song-hero__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .45rem .9rem;
+    border-radius: 9999px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    background: linear-gradient(180deg,#1f2937,#0b1220);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 6px 18px rgba(0,0,0,.35);
+}
+
+    .song-hero__chip i {
+        opacity: .95;
+    }
+
+.song-hero__title {
+    margin: .25rem 0 0;
+    text-align: center;
+    font-weight: 900;
+    font-size: clamp(2rem,6.2vw,3.5rem);
+    line-height: 1.1;
+    background: linear-gradient(90deg,#ffe400,#22c55e,#38bdf8,#ff2097,#ffffff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 6px 22px rgba(56,189,248,.25);
+}
+
+.song-hero__subtitle {
+    margin: 0;
+    opacity: .92;
+    color: #e5e7eb;
+    font-size: clamp(1rem,2.4vw,1.25rem);
+}
+
+/* du¿y, ³adny przycisk Start */
+.btn-hero {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: .8rem;
+    padding: 1.05rem 2.4rem;
+    border-radius: 9999px;
+    border: 0;
+    cursor: pointer;
+    font-weight: 900;
+    font-size: 1.25rem;
+    letter-spacing: .2px;
+    color: #001016;
+    isolation: isolate;
+    background: linear-gradient(180deg,#5cd1ff,#22b8f0);
+    box-shadow: 0 14px 34px rgba(56,189,248,.35), inset 0 0 0 1px rgba(255,255,255,.25);
+    transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+    .btn-hero i {
+        font-size: 1.1em;
+    }
+
+    .btn-hero kbd {
+        margin-left: .25rem;
+        padding: .2rem .5rem;
+        border-radius: .5rem;
+        font-size: .8rem;
+        font-weight: 800;
+        line-height: 1;
+        color: #073143;
+        background: rgba(255,255,255,.65);
+        border: 1px solid rgba(0,0,0,.05);
+    }
+
+/* neonowa poœwiata i „po³ysk” */
+.btn-hero__glow {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    z-index: -1;
+    background: linear-gradient(90deg,#ffffff,#ffe400,#22c55e,#38bdf8,#ff2097,#ffffff);
+    filter: blur(10px);
+    opacity: .55;
+    transition: opacity .2s ease;
+}
+
+.btn-hero::after {
+    content: "";
+    position: absolute;
+    left: -30%;
+    top: -220%;
+    width: 50%;
+    height: 500%;
+    transform: rotate(18deg);
+    background: linear-gradient(90deg, rgba(255,255,255,.0), rgba(255,255,255,.65), rgba(255,255,255,0));
+    mix-blend-mode: screen;
+    pointer-events: none;
+    opacity: .0;
+    transition: opacity .2s ease, transform .6s ease;
+}
+
+.btn-hero:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 16px 38px rgba(56,189,248,.45);
+    filter: brightness(1.02);
+}
+
+    .btn-hero:hover .btn-hero__glow {
+        opacity: .85;
+    }
+
+    .btn-hero:hover::after {
+        opacity: .9;
+        transform: rotate(18deg) translateX(35%);
+    }
+
+.btn-hero:active {
+    transform: translateY(0) scale(.99);
+}
+
+/* drobna szachownica œwiate³ek u do³u hero (spójne z motywem muzycznym) */
+.song-hero::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg,#ffffff,#ffe400,#39ff14,#38bdf8,#ff2097,#ffffff);
+    opacity: .9;
+}
+
+/* === Film: idealne wyœrodkowanie inputu, listy i przycisku === */
+.film-input-wrapper-guess {
+    /* zostaje flex-kolumna, ale dopinamy centrowanie wrappera */
+    width: 100%;
+    max-width: 800px; /* szerokoœæ jak w muzycznej wersji */
+    margin-inline: auto; /* centrowanie ca³ego wrappera */
+    align-items: center; /* dzieci na œrodku */
+    gap: 0.75rem; /* spójny odstêp */
+}
+
+.film-guess-input {
+    /* wype³nia wrapper — bez sztywnych pikseli poza nim */
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.film-suggestions-list {
+    width: 100%;
+    max-width: 800px; /* jak input */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.film-submit-btn {
+    margin-top: 1.25rem; /* zamiast globalnych 10rem */
+    align-self: center;
 }

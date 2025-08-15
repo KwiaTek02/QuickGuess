@@ -79,5 +79,54 @@ namespace QuickGuess.Controllers
             };
         }
 
+        [HttpGet("me/movie-ranking")]
+        public async Task<ActionResult<PlayerMovieStatsDto>> GetMyMovieRankingStats()
+        {
+            var userId = GetUserId();
+
+            var q = _db.Guesses.AsNoTracking()
+                .Where(g => g.UserId == userId && g.Type == "movie" && g.Mode == "ranking");
+
+            var games = await q.CountAsync();
+            var correct = await q.CountAsync(g => g.Correct);
+            var incorrect = games - correct;
+            var winRate = games > 0 ? (double)correct / games : 0.0;
+
+            var bestTime = await q.Where(g => g.Correct)
+                .Select(g => (int?)g.Duration)
+                .MinAsync() ?? 0;
+
+            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+
+            // Suma punktów z leaderboards (kolumna dla filmów) lub fallback do sumy z guesses
+            var totalScore = await _db.Leaderboards
+                                 .Where(l => l.UserId == userId)
+                                 .Select(l => (int?)l.ScoreMovies)   // jeśli masz nazwę ScoreFilms – zamień tutaj
+                                 .FirstOrDefaultAsync()
+                             ?? await q.SumAsync(g => g.Score);
+
+            var myScore = await _db.Leaderboards
+                .Where(l => l.UserId == userId)
+                .Select(l => (int?)l.ScoreMovies)                 // jw.
+                .FirstOrDefaultAsync() ?? totalScore;
+
+            var rankingPosition = 0;
+            if (myScore > 0)
+                rankingPosition = await _db.Leaderboards.CountAsync(l => l.ScoreMovies > myScore) + 1; // jw.
+
+            return new PlayerMovieStatsDto
+            {
+                Games = games,
+                Correct = correct,
+                Incorrect = incorrect,
+                WinRate = winRate,
+                RankingPosition = Math.Max(rankingPosition, 0),
+                BestTimeSec = bestTime,
+                AvgTimeSec = avgTime,
+                TotalScore = totalScore
+            };
+        }
+
+
     }
 }
