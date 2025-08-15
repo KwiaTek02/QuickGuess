@@ -5,29 +5,123 @@
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
 
-<h2 class="text-2xl font-bold mb-4">🎬 Tryb Rankingowy — Film</h2>
-
-<div class="film-game-fullscreen flex flex-col items-center justify-center min-h-screen text-center px-4">
+<div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
+    <h1 class="game-title">🎬 Jaki To Film?</h1>
 
     @if (!Started)
     {
-        <p class="mb-4">Zgadnij tytuł filmu na podstawie zdjęcia!</p>
-        <button class="bg-blue-600 text-white px-6 py-2 rounded" @onclick="StartGame">Start</button>
+        <section class="song-hero">
+            <div class="song-hero__chip">
+                <i class="fas fa-bolt"></i>
+                Tryb rankingowy
+            </div>
+
+            <h2 class="song-hero__title">Jaki To Film?</h2>
+            <p class="song-hero__subtitle">Czy rozpoznasz film po jednym kadrze?</p>
+
+            <button class="btn-hero" @onclick="StartGame">
+                <span class="btn-hero__glow"></span>
+                <i class="fas fa-play"></i>
+                <span>Start</span>
+                <kbd>Enter</kbd>
+            </button>
+        </section>
     }
     else if (CurrentMovie != null)
     {
-        <div class="film-center-container">
-            <img src="@ImageUrl" class="film-image-preview" />
+        <div class="flex flex-col items-center gap-6 w-full max-w-3xl mt-6">
+
+            <img src="@ImageUrl" alt="Kadr z filmu" class="film-image-preview" />
 
             @if (Started && !Answered)
             {
-                <div class="text-4xl font-mono font-bold text-center animate-pulse mt-2">
-                    ⏳ @Countdown s
+                <div class="hud-timer hud-timer--xl" aria-live="polite">
+                    <div id="base-timer" class="base-timer" role="timer" aria-label="Pozostały czas">
+                        <svg class="base-timer__svg" viewBox="0 0 100 100">
+                            <g class="base-timer__circle">
+                                <circle class="base-timer__path-elapsed" cx="50" cy="50" r="45"></circle>
+                                <path id="base-timer-path-remaining" stroke-dasharray="283"
+                                      class="base-timer__path-remaining green"
+                                      d="M 50, 50 m -45, 0 a 45,45 0 1,0 90,0 a 45,45 0 1,0 -90,0">
+                                </path>
+                            </g>
+                        </svg>
+                        <span id="base-timer-label" class="base-timer__label">0:20</span>
+                    </div>
                 </div>
             }
 
-            <div class="film-input-wrapper-guess">
-                <input class="film-guess-input" placeholder="🎬 Zgadnij tytuł..." @bind="Guess" @oninput="OnInput" disabled="@Answered" />
+            @* === OKNO WYNIKU NAD INPUTEM === *@
+            @if (Answered)
+            {
+                <div class="result-modal" role="dialog" aria-modal="true">
+                    <div class="result-header @(LastGuessCorrect ? "win" : "lose")">
+                        <h3 class="result-title">
+                            @((LastGuessCorrect) ? "🎉Udało ci się!🎉" : "❌Niestety nie tym razem!❌")
+                        </h3>
+                        <p class="result-subtitle">@ResultMessage</p>
+                    </div>
+
+                    <div class="result-body">
+                        <div class="stats-grid">
+                            <div class="stat">
+                                <div class="stat-label">⏱ Czas odpowiedzi</div>
+                                <div class="stat-value">@LastAnswerDuration s</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">🏅 Punkty za rundę</div>
+                                <div class="stat-value">@LastRoundPoints</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">🏆 Pozycja w rankingu</div>
+                                <div class="stat-value">#@PlayerStats?.RankingPosition</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">📈 % wygranych</div>
+                                <div class="stat-value">@($"{PlayerStats?.WinRate:P0}")</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">🎮 Gier (ranking)</div>
+                                <div class="stat-value">@PlayerStats?.Games</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">✔️ Trafionych</div>
+                                <div class="stat-value">@PlayerStats?.Correct</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">❌ Nietrafionych</div>
+                                <div class="stat-value">@PlayerStats?.Incorrect</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">⚡ Najszybsza odpowiedź</div>
+                                <div class="stat-value">@((PlayerStats?.BestTimeSec ?? 0)) s</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">⏳ Średni czas</div>
+                                <div class="stat-value">@($"{(PlayerStats?.AvgTimeSec ?? 0):0.0} s")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-actions">
+                        <button class="btn-modal neutral" @onclick='() => Navigation.NavigateTo("/panel")'>
+                            Wróć do panelu
+                        </button>
+                        <button class="btn-modal primary" @onclick="StartGame">
+                            Dalej (Enter)
+                        </button>
+                    </div>
+
+                    <button class="result-close" title="Zamknij (Esc)"
+                            @onclick='() => Navigation.NavigateTo("/panel")'>
+                        ×
+                    </button>
+                </div>
+            }
+
+            <div class="film-input-wrapper-guess" id="guess-wrapper">
+                <input class="film-guess-input" placeholder="🎬 Zgadnij tytuł..."
+                       @bind="Guess" @oninput="OnInput" disabled="@Answered" />
 
                 @if (TitleSuggestions.Any())
                 {
@@ -39,33 +133,14 @@
                     </ul>
                 }
 
-                <button class="film-submit-btn" @onclick="SubmitGuess" disabled="@Answered">
-                    ✅ Zatwierdź
-                </button>
+                <button class="film-submit-btn" @onclick="SubmitGuess" disabled="@Answered">✅ Zatwierdź</button>
             </div>
         </div>
-
     }
 </div>
 
-@if (Answered)
-{
-    <div id="film-result-block" class="film-result-block">
-        <p class="font-bold text-xl">@ResultMessage</p>
-
-        <div class="stats-summary mt-4">
-            <p><strong>⏱ Czas odpowiedzi:</strong> @Countdown sekund</p>
-            <p><strong>🎯 Trafność:</strong> @(ResultMessage.Contains("Brawo") ? "✔️ Trafione" : "❌ Nie trafione")</p>
-        </div>
-
-        <div class="flex flex-wrap justify-center gap-8 mt-8">
-            <button class="btn bg-gray-500" @onclick='() => Navigation.NavigateTo("/panel")'>Wróć do panelu</button>
-            <button class="btn bg-blue-600" @onclick="StartGame">Dalej</button>
-        </div>
-    </div>
-}
-
 @code {
+    // === DTOs ===
     protected class MovieDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
     protected class GuessResult
     {
@@ -74,8 +149,21 @@
         public int TotalScore { get; set; }
         public int RankingPosition { get; set; }
         public string CorrectTitle { get; set; } = "";
+        public string? DisplayTitle { get; set; }
+    }
+    public class PlayerMovieStats
+    {
+        public int Games { get; set; }
+        public int Correct { get; set; }
+        public int Incorrect { get; set; }
+        public double WinRate { get; set; }
+        public int RankingPosition { get; set; }
+        public int BestTimeSec { get; set; }
+        public double AvgTimeSec { get; set; }
+        public int TotalScore { get; set; }
     }
 
+    // === State ===
     protected MovieDto? CurrentMovie;
     protected string ImageUrl = "";
     protected string Guess = string.Empty;
@@ -84,30 +172,28 @@
     protected string ResultMessage = "";
     protected DateTime StartTime;
     private List<string> TitleSuggestions = new();
-    private int Countdown = 20;
-    private System.Timers.Timer? countdownTimer;
+    private int Countdown = 20; // (używany przez Timer.js do UI)
     private Guid GameSessionId = Guid.NewGuid();
 
-    private void StartCountdown()
+    private bool LastGuessCorrect;
+    private int LastAnswerDuration;
+    private int LastRoundPoints;
+    private PlayerMovieStats? PlayerStats;
+
+    // === Helpers ===
+    private async void StartCountdown()
     {
         Countdown = 20;
+        StartTime = DateTime.Now;
 
-        countdownTimer?.Stop();
-        countdownTimer = new System.Timers.Timer(1000);
-        countdownTimer.Elapsed += async (_, _) =>
+        try
         {
-            if (Countdown > 0)
-            {
-                Countdown--;
-                await InvokeAsync(StateHasChanged);
-            }
-            else
-            {
-                countdownTimer?.Stop();
-                await TimeoutGuess(GameSessionId);
-            }
-        };
-        countdownTimer.Start();
+            await JS.InvokeVoidAsync("Timer.start", DotNetObjectReference.Create(this), GameSessionId, 20);
+        }
+        catch (JSException ex)
+        {
+            Console.WriteLine($"JS Error: {ex.Message}");
+        }
     }
 
     private async Task OnInput(ChangeEventArgs e)
@@ -136,6 +222,10 @@
         Answered = false;
         ResultMessage = "";
         Guess = "";
+        PlayerStats = null;
+        LastGuessCorrect = false;
+        LastAnswerDuration = 0;
+        LastRoundPoints = 0;
 
         var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
         if (movies?.Count > 0)
@@ -143,6 +233,7 @@
             CurrentMovie = movies[0];
             ImageUrl = $"https://localhost:7236/api/media/movie-image/{CurrentMovie.Id}";
             StateHasChanged();
+            await Task.Delay(50);
             StartTime = DateTime.Now;
             StartCountdown();
         }
@@ -150,9 +241,10 @@
 
     protected async Task SubmitGuess()
     {
-        if (CurrentMovie == null) return;
+        if (CurrentMovie == null || Answered) return;
 
-        countdownTimer?.Stop();
+        Answered = true;                   // zablokuj od razu
+        await JS.InvokeVoidAsync("Timer.stop");
 
         var duration = (int)(DateTime.Now - StartTime).TotalSeconds;
 
@@ -170,22 +262,24 @@
         if (!res.IsSuccessStatusCode)
         {
             ResultMessage = "❌ Błąd serwera lub brak autoryzacji.";
-            Answered = true;
             return;
         }
 
         var result = await res.Content.ReadFromJsonAsync<GuessResult>();
-        Answered = true;
 
-        ResultMessage = result!.Correct
-            ? $"🎉 Brawo! +{result.Score} pkt w {duration} sek\n" +
-              $"Twój łączny wynik: {result.TotalScore} pkt\n" +
-              $"Pozycja w rankingu: #{result.RankingPosition}"
-            : $"❌ Pudło! Prawidłowy tytuł: {result.CorrectTitle}\n" +
-              $"Twój wynik: {result.Score} pkt w {duration} sek\n" +
-              $"Łącznie: {result.TotalScore} pkt | Pozycja: #{result.RankingPosition}";
+        LastAnswerDuration = duration;
+        LastGuessCorrect = result!.Correct;
+        LastRoundPoints = result.Score;
 
-        await JS.InvokeVoidAsync("scrollToElement", "film-result-block");
+        ResultMessage = result.Correct
+            ? $"{result.DisplayTitle ?? result.CorrectTitle}"
+            : $"{result.DisplayTitle ?? result.CorrectTitle}";
+
+        try
+        {
+            PlayerStats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
+        }
+        catch { /* opcjonalnie log */ }
     }
 
     [JSInvokable]
@@ -196,6 +290,7 @@
 
         Answered = true;
         ResultMessage = "⏱ Czas minął!";
+        await JS.InvokeVoidAsync("Timer.stop");
         StateHasChanged();
     }
 
@@ -204,7 +299,10 @@
         var match = System.Text.RegularExpressions.Regex.Match(input, @"^(.*?)(?: \(\d{4}\))?$");
         if (match.Success)
         {
-            return match.Groups[1].Value.Trim();
+            var cleaned = match.Groups[1].Value;
+            if (cleaned.Contains(" - "))
+                return cleaned.Split(" - ")[1].Trim();
+            return cleaned.Trim();
         }
         return input.Trim();
     }
