@@ -1,0 +1,214 @@
+﻿@page "/profil/{Id:guid}"
+@using System.Net.Http.Json
+@using Frontend.Services
+@inject HttpClient Http
+@inject AuthorizedHttpClient AuthHttp
+@inject IJSRuntime JS
+
+<div class="game-fullscreen has-fixed-title profile-page">
+    <h1 class="game-title">👤 Profil gracza</h1>
+
+    <div class="profile-container">
+        @if (Loading)
+        {
+            <div class="card">Ładowanie…</div>
+        }
+        else if (NotFound)
+        {
+            <div class="card">Nie znaleziono profilu.</div>
+        }
+        else if (ProfileData is not null)
+        {
+            <div class="profile-layout">
+                <!-- LEWA KOLUMNA -->
+                <div class="profile-left">
+                    <section class="profile-header">
+                        <div class="profile-avatar">@ProfileData.Username[..1].ToUpper()</div>
+                        <div class="profile-head-text">
+                            <h2 class="profile-name">@ProfileData.Username</h2>
+                            <p class="profile-meta">Dołączył: @ProfileData.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")</p>
+                        </div>
+                    </section>
+
+                    <section class="profile-note card">
+                        <h3 class="card-title">📝 Notatka</h3>
+
+                        @if (IsMe)
+                        {
+                            <textarea class="note-input"
+                  @bind="EditNote"
+                  @bind:event="oninput"
+                  maxlength="@NoteMax"
+                  placeholder="Napisz coś o sobie…"></textarea>
+
+                            <div class="note-actions with-counter">
+                                <div class="char-counter">@((EditNote?.Length ?? 0))/@NoteMax</div>
+                                <button class="btn-modal primary" disabled="@Saving" @onclick="SaveNote">
+                                    @(Saving ? "Zapisywanie…" : "Zapisz notatkę")
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="note-read">@(!string.IsNullOrWhiteSpace(ProfileData.Note) ? ProfileData.Note : "Brak notatki.")</p>
+                        }
+                    </section>
+                </div>
+
+                <!-- PRAWA KOLUMNA -->
+                <div class="profile-right">
+                    <div class="card">
+                        <nav class="tabs tabs--inside-card">
+                            <button class="tab @(ActiveTab == "ogolne" ? "active" : null)" @onclick='() => ActiveTab = "ogolne"'>Ogólne</button>
+                            <button class="tab @(ActiveTab == "songs" ? "active" : null)" @onclick='() => ActiveTab = "songs"'>Piosenki</button>
+                            <button class="tab @(ActiveTab == "movies" ? "active" : null)" @onclick='() => ActiveTab = "movies"'>Filmy</button>
+                        </nav>
+
+                        @if (ActiveTab == "ogolne")
+                        {
+                            <section class="grid-3">
+                                <div class="stat">
+                                    <div class="stat-label">🎵 Punkty (piosenki)</div>
+                                    <div class="stat-value">@ProfileData.TotalScoreSongs</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">🎬 Punkty (filmy)</div>
+                                    <div class="stat-value">@ProfileData.TotalScoreMovies</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">🔢 Suma punktów</div>
+                                    <div class="stat-value">@((ProfileData.TotalScoreSongs + ProfileData.TotalScoreMovies))</div>
+                                </div>
+                            </section>
+                        }
+                        else if (ActiveTab == "songs")
+                        {
+                            <section class="stats-grid">
+                                <div class="stat"><div class="stat-label">⏱ Najlepszy czas</div><div class="stat-value">@((SongStats?.BestTimeSec ?? 0)) s</div></div>
+                                <div class="stat"><div class="stat-label">⏳ Średni czas</div><div class="stat-value">@($"{(SongStats?.AvgTimeSec ?? 0):0.0} s")</div></div>
+                                <div class="stat"><div class="stat-label">🏆 Pozycja</div><div class="stat-value">#@SongStats?.RankingPosition</div></div>
+                                <div class="stat"><div class="stat-label">🎮 Gier (ranking)</div><div class="stat-value">@SongStats?.Games</div></div>
+                                <div class="stat"><div class="stat-label">✔️ Trafionych</div><div class="stat-value">@SongStats?.Correct</div></div>
+                                <div class="stat"><div class="stat-label">❌ Nietrafionych</div><div class="stat-value">@SongStats?.Incorrect</div></div>
+                                <div class="stat"><div class="stat-label">📈 % wygranych</div><div class="stat-value">@($"{SongStats?.WinRate:P0}")</div></div>
+                                <div class="stat"><div class="stat-label">🏅 Punkty</div><div class="stat-value">@SongStats?.TotalScore</div></div>
+                            </section>
+                        }
+                        else if (ActiveTab == "movies")
+                        {
+                            <section class="stats-grid">
+                                <div class="stat"><div class="stat-label">⏱ Najlepszy czas</div><div class="stat-value">@((MovieStats?.BestTimeSec ?? 0)) s</div></div>
+                                <div class="stat"><div class="stat-label">⏳ Średni czas</div><div class="stat-value">@($"{(MovieStats?.AvgTimeSec ?? 0):0.0} s")</div></div>
+                                <div class="stat"><div class="stat-label">🏆 Pozycja</div><div class="stat-value">#@MovieStats?.RankingPosition</div></div>
+                                <div class="stat"><div class="stat-label">🎮 Gier (ranking)</div><div class="stat-value">@MovieStats?.Games</div></div>
+                                <div class="stat"><div class="stat-label">✔️ Trafionych</div><div class="stat-value">@MovieStats?.Correct</div></div>
+                                <div class="stat"><div class="stat-label">❌ Nietrafionych</div><div class="stat-value">@MovieStats?.Incorrect</div></div>
+                                <div class="stat"><div class="stat-label">📈 % wygranych</div><div class="stat-value">@($"{MovieStats?.WinRate:P0}")</div></div>
+                                <div class="stat"><div class="stat-label">🏅 Punkty</div><div class="stat-value">@MovieStats?.TotalScore</div></div>
+                            </section>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    class ProfileDto
+    {
+        public Guid PublicId { get; set; }
+        public string Username { get; set; } = "";
+        public string? Note { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int TotalScoreSongs { get; set; }
+        public int TotalScoreMovies { get; set; }
+    }
+
+    class PlayerSongStats
+    {
+        public int Games { get; set; }
+        public int Correct { get; set; }
+        public int Incorrect { get; set; }
+        public double WinRate { get; set; }
+        public int RankingPosition { get; set; }
+        public int BestTimeSec { get; set; }
+        public double AvgTimeSec { get; set; }
+        public int TotalScore { get; set; }
+    }
+
+    class PlayerMovieStats
+    {
+        public int Games { get; set; }
+        public int Correct { get; set; }
+        public int Incorrect { get; set; }
+        public double WinRate { get; set; }
+        public int RankingPosition { get; set; }
+        public int BestTimeSec { get; set; }
+        public double AvgTimeSec { get; set; }
+        public int TotalScore { get; set; }
+    }
+
+    ProfileDto? ProfileData;
+    PlayerSongStats? SongStats;
+    PlayerMovieStats? MovieStats;
+
+    bool Loading = true;
+    bool NotFound = false;
+    bool IsMe = false;
+    string ActiveTab = "ogolne";
+    string? EditNote;
+    bool Saving;
+    const int NoteMax = 256;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Loading = true; NotFound = false;
+
+        var pr = await Http.GetAsync($"/api/profile/{Id}");
+        if (!pr.IsSuccessStatusCode)
+        {
+            Loading = false; NotFound = true; return;
+        }
+        ProfileData = await pr.Content.ReadFromJsonAsync<ProfileDto>();
+
+        SongStats = await SafeGet<PlayerSongStats>($"/api/stats/user/{Id}/song-ranking");
+        MovieStats = await SafeGet<PlayerMovieStats>($"/api/stats/user/{Id}/movie-ranking");
+
+        var myId = await JS.InvokeAsync<string>("localStorage.getItem", "authId");
+        IsMe = !string.IsNullOrWhiteSpace(myId) && Guid.TryParse(myId, out var g) && g == Id;
+
+        EditNote = ProfileData?.Note;
+        if (EditNote?.Length > NoteMax) EditNote = EditNote[..NoteMax];
+        Loading = false;
+    }
+
+    async Task<T?> SafeGet<T>(string url)
+    {
+        try
+        {
+            var r = await Http.GetAsync(url);
+            if (!r.IsSuccessStatusCode) return default;
+            return await r.Content.ReadFromJsonAsync<T>();
+        }
+        catch { return default; }
+    }
+
+    async Task SaveNote()
+    {
+        if (!IsMe || Saving) return;
+        Saving = true;
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            var resp = await client.PutAsJsonAsync("/api/profile/me/note", new { note = EditNote });
+            if (resp.IsSuccessStatusCode && ProfileData is not null)
+                ProfileData.Note = EditNote;
+        }
+        finally { Saving = false; }
+    }
+
+
+}

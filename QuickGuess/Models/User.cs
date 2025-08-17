@@ -38,5 +38,11 @@ namespace QuickGuess.Models
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Column("public_id")]
+        public Guid? PublicId { get; set; } = Guid.NewGuid();
+
+        [Column("profile_note")]
+        public string? ProfileNote { get; set; }
     }
 }

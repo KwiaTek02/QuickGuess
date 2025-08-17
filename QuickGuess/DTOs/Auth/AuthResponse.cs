@@ -7,5 +7,7 @@
         public string Email { get; set; } = null!;
         public string Role { get; set; } = null!;
 
+        public Guid PublicId { get; set; }
+
     }
 }

@@ -56,5 +56,21 @@ namespace QuickGuess.Controllers
 
             return Ok(data);
         }
+
+        [HttpGet("global-all")]
+        public async Task<IActionResult> GetGlobalLeaderboardAll()
+        {
+            var data = await _db.Leaderboards
+                .Include(l => l.User)
+                .OrderByDescending(l => l.ScoreTotal)
+                .Select(l => new {
+                    PublicId = l.User.PublicId,
+                    Username = l.User.Username,
+                    scoreTotal = l.ScoreTotal
+                })
+                .ToListAsync();
+
+            return Ok(data);
+        }
     }
 }

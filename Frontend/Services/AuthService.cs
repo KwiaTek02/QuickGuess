@@ -31,6 +31,7 @@ namespace Frontend.Services
 
             await _js.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
             await _js.InvokeVoidAsync("localStorage.setItem", "authUser", result.Username);
+            await _js.InvokeVoidAsync("localStorage.setItem", "authId", result.PublicId.ToString());
 
             _authState.NotifyAuthenticationChanged();
             return true;
@@ -52,6 +53,8 @@ namespace Frontend.Services
         {
             await _js.InvokeVoidAsync("localStorage.removeItem", "authToken");
             await _js.InvokeVoidAsync("localStorage.removeItem", "authUser");
+            await _js.InvokeVoidAsync("localStorage.removeItem", "authId");
+
             _authState.NotifyAuthenticationChanged();
         }
 
@@ -61,6 +64,23 @@ namespace Frontend.Services
             public string Username { get; set; } = "";
             public string Email { get; set; } = "";
             public string Role { get; set; } = "";
+            public Guid PublicId { get; set; }
+        }
+
+        public async Task<bool> GoogleLogin(string idToken)
+        {
+            var response = await _http.PostAsJsonAsync("/api/auth/google-login", new { IdToken = idToken });
+            if (!response.IsSuccessStatusCode) return false;
+
+            var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (result == null) return false;
+
+            await _js.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+            await _js.InvokeVoidAsync("localStorage.setItem", "authUser", result.Username);
+            await _js.InvokeVoidAsync("localStorage.setItem", "authId", result.PublicId.ToString());
+
+            _authState.NotifyAuthenticationChanged();
+            return true;
         }
     }
 }
