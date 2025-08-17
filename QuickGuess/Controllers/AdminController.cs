@@ -45,5 +45,30 @@ namespace QuickGuess.Controllers
             await _db.SaveChangesAsync();
             return Ok(proposal);
         }
+
+        [HttpGet("approved-proposals")]
+        public async Task<IActionResult> GetApprovedProposals()
+        {
+            var ok = await _db.ProposedTitles
+                .Include(p => p.User)
+                .Where(p => p.Status == "approved")
+                .OrderByDescending(p => p.ReviewedAt)
+                .ToListAsync();
+
+            return Ok(ok);
+        }
+
+        [HttpPost("finalize/{id:guid}")]
+        public async Task<IActionResult> FinalizeApproved(Guid id)
+        {
+            var p = await _db.ProposedTitles.FindAsync(id);
+            if (p == null) return NotFound();
+            if (p.Status != "approved")
+                return BadRequest("Proposal must be in 'approved' status.");
+
+            _db.ProposedTitles.Remove(p);
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
     }
 }

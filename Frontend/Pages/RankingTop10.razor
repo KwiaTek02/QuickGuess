@@ -1,58 +1,152 @@
 ﻿@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 @using Microsoft.AspNetCore.Components
+@using System.Net
 
-@if (!(TylkoPiosenki || TylkoFilmy))
-{
-    <div class="ranking-tabs">
-        <button class="@GetTabClass("global")" @onclick='() => LoadLeaderboard("global")'>🌐 Ogólne</button>
-        <button class="@GetTabClass("songs")" @onclick='() => LoadLeaderboard("songs")'>🎵 Muzyka</button>
-        <button class="@GetTabClass("movies")" @onclick='() => LoadLeaderboard("movies")'>🎬 Filmy</button>
-    </div>
-}
-
-<ul class="ranking-list">
-    @if (leaderboard.Count == 0)
+<div class="lb">
+    @if (!(TylkoPiosenki || TylkoFilmy))
     {
-        <li>Ładowanie rankingu...</li>
+        <div class="lb-tabs">
+            <button class="lb-tab @(activeTab == "global" ? "is-active" : null)" @onclick='() => SwitchTab("global")'>🌐 Ogólne</button>
+            <button class="lb-tab @(activeTab == "songs" ? "is-active" : null)" @onclick='() => SwitchTab("songs")'>🎵 Muzyka</button>
+            <button class="lb-tab @(activeTab == "movies" ? "is-active" : null)" @onclick='() => SwitchTab("movies")'>🎬 Filmy</button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <ul class="lb-list">
+            @for (int i = 0; i < 10; i++)
+            {
+                <li class="lb-row skeleton">
+                    <div class="lb-place"><div class="sk-place"></div></div>
+                    <div class="lb-user">
+                        <div class="sk-avatar"></div>
+                        <div class="meta">
+                            <div class="sk-line w60"></div>
+                            <div class="sk-bar"></div>
+                        </div>
+                    </div>
+                    <div class="lb-score"><div class="sk-score"></div></div>
+                </li>
+            }
+        </ul>
     }
     else
     {
-        @foreach (var (username, score) in leaderboard.Take(10))
-        {
-            <li><strong>@username</strong>: @score pkt</li>
-        }
+        <ul class="lb-list">
+            @if (leaderboard.Count == 0)
+            {
+                <li class="lb-empty">Brak danych do wyświetlenia.</li>
+            }
+            else
+            {
+                var max = leaderboard.Max(x => x.Score);
+                var pos = 1;
+
+                foreach (var row in leaderboard.Take(10))
+                {
+                    var username = row.Username;
+                    var score = row.Score;
+                    var id = row.Id;
+
+                    var me = IsMe(username);
+                    var pct = max > 0 ? (int)Math.Round(score * 100.0 / max) : 0;
+
+                    <li class="lb-row @(pos <= 3 ? $"top{pos}" : null) @(me ? "is-me" : null)"
+                        role="button"
+                        title="Zobacz profil"
+                        @onclick="() => OpenProfile(username, id)">
+                        <div class="lb-place">
+                            @if (pos == 1)
+                            {
+                                <span class="medal gold">🥇</span>
+                            }
+                            else if (pos == 2)
+                            {
+
+                                <span class="medal silver">🥈</span>
+                            }
+                            else if (pos == 3)
+                            {
+
+                                <span class="medal bronze">🥉</span>
+                            }
+                            else
+                            {
+
+                                <span class="num">@pos</span>
+                            }
+                        </div>
+
+                        <div class="lb-user">
+                            <div class="avatar @(me ? "me" : null)">@username[..1].ToUpper()</div>
+                            <div class="meta">
+                                <div class="name" title="@username">@username @(me ? " (Ty)" : null)</div>
+                            </div>
+                        </div>
+
+                        <div class="lb-score">@score<span class="unit"> pkt</span></div>
+                    </li>
+
+                    pos++;
+                }
+
+                @if (leaderboard.Count > 0)
+                {
+                    <li class="lb-more">
+                        <button class="lb-more-btn" @onclick="ShowFullRanking">
+                            Zobacz cały ranking
+                        </button>
+                    </li>
+                }
+            }
+        </ul>
     }
-</ul>
+</div>
 
 @code {
     [Parameter] public bool TylkoPiosenki { get; set; } = false;
     [Parameter] public bool TylkoFilmy { get; set; } = false;
+    [Parameter] public string? CurrentUser { get; set; }
 
+    private string? userFromStorage;
     private string activeTab = "global";
-    private List<(string Username, int Score)> leaderboard = new();
+    private bool isLoading = true;
+    private void ShowFullRanking() => Nav.NavigateTo("/ranking");
+
+    // Wiersz z opcjonalnym Id gracza (Guid.Empty, jeśli API go nie da)
+    private record Row(Guid Id, string Username, int Score);
+    private List<Row> leaderboard = new();
 
     protected override async Task OnInitializedAsync()
     {
-        if (TylkoPiosenki)
-        {
-            activeTab = "songs";
-            await LoadLeaderboard("songs");
-        }
-        else if (TylkoFilmy)
-        {
-            activeTab = "movies";
-            await LoadLeaderboard("movies");
-        }
-        else
-        {
-            activeTab = "global";
-            await LoadLeaderboard("global");
-        }
+        if (TylkoPiosenki) activeTab = "songs";
+        else if (TylkoFilmy) activeTab = "movies";
+        else activeTab = "global";
+
+        userFromStorage = await JS.InvokeAsync<string>("localStorage.getItem", "authUser");
+        await LoadLeaderboard(activeTab);
+    }
+
+    private bool IsMe(string username) =>
+        !string.IsNullOrWhiteSpace(CurrentUser)
+            ? string.Equals(username, CurrentUser, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(username, userFromStorage, StringComparison.OrdinalIgnoreCase);
+
+    private async Task SwitchTab(string tab)
+    {
+        if (tab == activeTab) return;
+        activeTab = tab;
+        await LoadLeaderboard(tab);
     }
 
     private async Task LoadLeaderboard(string type)
     {
+        isLoading = true;
         leaderboard.Clear();
+        StateHasChanged();
 
         string url = type switch
         {
@@ -61,51 +155,98 @@
             _ => "api/leaderboard/global"
         };
 
-        switch (type)
+        try
         {
-            case "songs":
-                var songsResult = await Http.GetFromJsonAsync<List<SongsEntry>>(url);
-                if (songsResult is not null)
-                    leaderboard = songsResult.Select(e => (e.Username, e.Score)).ToList();
-                break;
+            switch (type)
+            {
+                case "songs":
+                    var s = await Http.GetFromJsonAsync<List<SongsEntry>>(url);
+                    if (s is not null)
+                        leaderboard = s.Select(e => new Row(e.PublicId, e.Username, e.Score)).ToList();
+                    break;
 
-            case "movies":
-                var moviesResult = await Http.GetFromJsonAsync<List<MoviesEntry>>(url);
-                if (moviesResult is not null)
-                    leaderboard = moviesResult.Select(e => (e.Username, e.Score)).ToList();
-                break;
+                case "movies":
+                    var m = await Http.GetFromJsonAsync<List<MoviesEntry>>(url);
+                    if (m is not null)
+                        leaderboard = m.Select(e => new Row(e.PublicId, e.Username, e.Score)).ToList();
+                    break;
 
-            default:
-                var globalResult = await Http.GetFromJsonAsync<List<GlobalEntry>>(url);
-                if (globalResult is not null)
-                    leaderboard = globalResult.Select(e => (e.Username, e.Score)).ToList();
-                break;
+                default:
+                    var g = await Http.GetFromJsonAsync<List<GlobalEntry>>(url);
+                    if (g is not null)
+                        leaderboard = g.Select(e => new Row(e.PublicId, e.Username, e.Score)).ToList();
+                    break;
+            }
         }
+        finally { isLoading = false; }
     }
 
-    private string GetTabClass(string tab) => tab == activeTab ? "ranking-tab active" : "ranking-tab";
+    // --- Kliknięcie w wiersz -> otwórz profil
+    private async Task OpenProfile(string username, Guid? id)
+    {
+        // 1) Jeśli mamy PublicId z leaderboardu – nawiguj od razu
+        if (id.HasValue && id.Value != Guid.Empty)
+        {
+            Nav.NavigateTo($"/profil/{id.Value}");
+            return;
+        }
 
+        // 2) Spróbuj dociągnąć Id po nazwie użytkownika (obsługujemy 2 popularne ścieżki)
+        var encoded = WebUtility.UrlEncode(username);
+
+        // /api/profile/username/{name}
+        try
+        {
+            var p1 = await Http.GetFromJsonAsync<ProfileLookup>($"/api/profile/username/{encoded}");
+            if (p1 is not null && p1.PublicId != Guid.Empty)
+            {
+                Nav.NavigateTo($"/profil/{p1.PublicId}");
+                return;
+            }
+        }
+        catch { /* ignoruj – spróbujemy drugim endpointem */ }
+
+        // /api/profile/lookup?username={name}
+        try
+        {
+            var p2 = await Http.GetFromJsonAsync<ProfileLookup>($"/api/profile/lookup?username={encoded}");
+            if (p2 is not null && p2.PublicId != Guid.Empty)
+            {
+                Nav.NavigateTo($"/profil/{p2.PublicId}");
+                return;
+            }
+        }
+        catch { }
+
+        await JS.InvokeVoidAsync("alert", "Nie udało się otworzyć profilu tego gracza.");
+    }
+
+    // --- Modele DTO (z PublicId)
     public class GlobalEntry
     {
+        public Guid PublicId { get; set; }          // <— NOWE
         public string Username { get; set; } = "";
-
         [System.Text.Json.Serialization.JsonPropertyName("scoreTotal")]
         public int Score { get; set; }
     }
-
     public class SongsEntry
     {
+        public Guid PublicId { get; set; }          // <— NOWE
         public string Username { get; set; } = "";
-
         [System.Text.Json.Serialization.JsonPropertyName("scoreSongs")]
         public int Score { get; set; }
     }
-
     public class MoviesEntry
     {
+        public Guid PublicId { get; set; }          // <— NOWE
         public string Username { get; set; } = "";
-
         [System.Text.Json.Serialization.JsonPropertyName("scoreMovies")]
         public int Score { get; set; }
+    }
+
+    private class ProfileLookup
+    {
+        public Guid PublicId { get; set; }
+        public string Username { get; set; } = "";
     }
 }

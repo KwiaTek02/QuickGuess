@@ -1,0 +1,487 @@
+﻿@page "/propozycje"
+@using System.Net.Http.Json
+@using System.Globalization
+@using System.Text
+@using Frontend.Services
+@inject HttpClient Http
+@inject AuthorizedHttpClient AuthHttp
+
+<div class="game-fullscreen has-fixed-title">
+    <h1 class="game-title">📝 Propozycje tytułów</h1>
+
+    <div class="profile-container proposals-shell @((activeTab == "admin-pending" || activeTab == "admin-approved") ? "is-wide" : "is-large")">
+
+        <!-- Zakładki główne -->
+        <nav class="tabs">
+            <button class="tab @(activeTab == "songs" ? "active" : null)"
+                    @onclick='() => SwitchTab("songs")'>
+                🎵 Piosenki
+            </button>
+            <button class="tab @(activeTab == "movies" ? "active" : null)"
+                    @onclick='() => SwitchTab("movies")'>
+                🎬 Filmy
+            </button>
+            @if (isAdmin)
+            {
+                <button class="tab @(activeTab == "admin-pending" ? "active" : null)"
+                        @onclick='() => SwitchTab("admin-pending")'>
+                    🕒 Do akceptacji
+                </button>
+                <button class="tab @(activeTab == "admin-approved" ? "active" : null)"
+                        @onclick='() => SwitchTab("admin-approved")'>
+                    ✅ Zatwierdzone
+                </button>
+            }
+        </nav>
+
+        @if (activeTab == "songs" || activeTab == "movies")
+        {
+            <div class="card propose-card">
+                <div class="propose-header">
+                    <div class="daily-counter">
+                        @if (isAdmin)
+                        {
+                            <text>Dzisiaj: <strong>@(GetTodayCount(activeTab))</strong> (bez limitu)</text>
+                        }
+                        else
+                        {
+                            <text>Dzisiaj: <strong>@(GetTodayCount(activeTab))/5</strong></text>
+                        }
+                </div>
+                <div class="hint">@((isAdmin) ? "Administrator nie ma limitu dziennego." : "Limit 5 dziennie.")</div>
+            </div>
+
+            <div class="propose-intro @(activeTab == "songs" ? "is-song" : "is-movie")">
+                <div class="intro-icon">@((activeTab == "songs") ? "🎵" : "🎬")</div>
+                <div class="intro-copy">
+                    <div class="intro-title">
+                        @((activeTab == "songs")
+                                                ? "Możesz zaproponować tytuł piosenki"
+                                                : "Możesz zaproponować tytuł filmu")
+                    </div>
+                    <div class="intro-desc">
+                        @if (activeTab == "songs")
+                            {
+                                <span>Podaj pełny tytuł utworu. Opcjonalnie dodaj wykonawcę lub krótką notatkę.</span>
+                            }
+                            else
+                            {
+                                <span>Podaj pełny tytuł filmu. Opcjonalnie dodaj rok, reżysera lub krótką notatkę.</span>
+                            }
+                            <span class="intro-extra">@((isAdmin) ? "Brak limitu dla administratora." : "Limit: 5 propozycji dziennie.")</span>
+
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="propose-inputs">
+                    <!-- TYTUŁ (120) -->
+                    <input class="input-title"
+                           placeholder="@(activeTab == "songs" ? "np. The Weeknd - Blinding Lights (2020)" : "np. Interstellar (2014)")"
+                           @bind="titleInput"
+                           maxlength="120" />
+                    <div class="note-actions with-counter">
+                        <div></div>
+                        <div class="char-counter">@((titleInput?.Length ?? 0))/120</div>
+                    </div>
+
+                    <!-- NOTATKA (50) -->
+                    <input class="input-note"
+                           placeholder="(opcjonalnie) Krótka notatka "
+                           @bind="noteInput"
+                           maxlength="50" />
+                    <div class="note-actions with-counter">
+                        <div></div>
+                        <div class="char-counter">@((noteInput?.Length ?? 0))/50</div>
+                    </div>
+
+                    <button class="btn-modal primary"
+                            disabled="@IsSubmitDisabled"
+                            @onclick="SubmitProposal">
+                        Wyślij propozycję
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(feedback))
+                {
+                    <p class="feedback">@feedback</p>
+                }
+            </div>
+        }
+        else if (activeTab == "admin-pending")
+        {
+            <div class="card">
+                <h3 class="card-title">🕒 Oczekujące propozycje</h3>
+
+                @if (!isAdmin)
+                {
+                    <p>Brak uprawnień.</p>
+                }
+                else if (loadingAdmin)
+                {
+                    <p>Ładowanie…</p>
+                }
+                else if (pending.Count == 0)
+                {
+                    <p>Nic nie czeka na akceptację.</p>
+                }
+                else
+                {
+                    <div class="admin-tools">
+                        <input class="admin-search" placeholder="Szukaj tytułu, notatki lub użytkownika…"
+                               @bind="adminQuery" />
+                        <select class="admin-sort" @bind="adminSort">
+                            <option value="date_desc">Data ↓ (najnowsze)</option>
+                            <option value="date_asc">Data ↑ (najstarsze)</option>
+                            <option value="title_asc">Tytuł A–Z</option>
+                            <option value="title_desc">Tytuł Z–A</option>
+                        </select>
+                    </div>
+
+                    @* Jesteśmy w bloku else – NIE używaj @{ } *@
+                    var view = AdminViewItems.ToList();
+
+                    @if (view.Count == 0)
+                    {
+                        <p>Brak wyników dla „@adminQuery”.</p>
+                    }
+                    else
+                    {
+                        <div class="admin-list-wrap">
+                            <ul class="admin-list">
+                                @foreach (var p in view)
+                                {
+                                    <li class="admin-row">
+                                        <div class="meta">
+                                            <div class="topline">
+                                                <span class="badge">@p.Type</span>
+                                                <span class="title">@p.Title</span>
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(p.ArtistOrNote))
+                                            {
+                                                <div class="note-block">@p.ArtistOrNote</div>
+                                            }
+
+                                            <div class="info">
+                                                <span class="user">(@p.User?.Username)</span>
+                                                <span class="time">@p.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="actions">
+                                            <button class="btn-modal primary" @onclick="() => Review(p.Id, true)">Zatwierdź</button>
+                                            <button class="btn-modal neutral" @onclick="() => Review(p.Id, false)">Odrzuć</button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                }
+            </div>
+        }
+        else if (activeTab == "admin-approved")
+        {
+            <div class="card">
+                <h3 class="card-title">✅ Zatwierdzone (do dodania do bazy)</h3>
+
+                @if (!isAdmin)
+                {
+                    <p>Brak uprawnień.</p>
+                }
+                else if (loadingAdmin)
+                {
+                    <p>Ładowanie…</p>
+                }
+                else if (approved.Count == 0)
+                {
+                    <p>Brak zatwierdzonych propozycji.</p>
+                }
+                else
+                {
+                    <div class="admin-tools">
+                        <input class="admin-search" placeholder="Szukaj tytułu, notatki lub użytkownika…"
+                               @bind="adminQuery" />
+                        <select class="admin-sort" @bind="adminSort">
+                            <option value="date_desc">Data ↓ (najnowsze)</option>
+                            <option value="date_asc">Data ↑ (najstarsze)</option>
+                            <option value="title_asc">Tytuł A–Z</option>
+                            <option value="title_desc">Tytuł Z–A</option>
+                        </select>
+                    </div>
+
+                    var view = AdminViewItems.ToList();
+
+                    @if (view.Count == 0)
+                    {
+                        <p>Brak wyników dla „@adminQuery”.</p>
+                    }
+                    else
+                    {
+                        <div class="admin-list-wrap">
+                            <ul class="admin-list">
+                                @foreach (var p in view)
+                                {
+                                    <li class="admin-row">
+                                        <div class="meta">
+                                            <div class="topline">
+                                                <span class="badge ok">@p.Type</span>
+                                                <span class="title">@p.Title</span>
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(p.ArtistOrNote))
+                                            {
+                                                <div class="note-block">@p.ArtistOrNote</div>
+                                            }
+
+                                            <div class="info">
+                                                <span class="user">(@p.User?.Username)</span>
+                                                <span class="time">@((p.ReviewedAt ?? p.CreatedAt).ToLocalTime().ToString("dd.MM.yyyy HH:mm"))</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="actions">
+                                            <button class="btn-modal primary"
+                                                    disabled="@processing.Contains(p.Id)"
+                                                    @onclick="() => FinalizeApproved(p.Id)">
+                                                ✅ Dodano do bazy
+                                            </button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+    </div>
+</div>
+
+@code {
+    // UI
+    string activeTab = "songs";
+    string titleInput = "";
+    string noteInput = "";
+    string feedback = "";
+    string adminQuery = "";
+    string adminSort = "date_desc";
+    HashSet<Guid> processing = new();
+    string adminMsg = "";
+
+
+
+    // limity dzienne
+    int todaySongs = 0;
+    int todayMovies = 0;
+
+    // admin
+    bool isAdmin = false;
+    bool loadingAdmin = false;
+    List<ProposalDto> pending = new();
+    List<ProposalDto> approved = new();
+
+    record ProposalDto(Guid Id, string Type, string Title, string? ArtistOrNote, string Status, DateTime CreatedAt, DateTime? ReviewedAt, SimpleUser? User);
+    record SimpleUser(string Username);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshCounts();
+        // delikatnie sprawdzamy czy user to admin (bez crashy)
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            var ping = await client.GetAsync("api/admin/pending-proposals?take=1");
+            isAdmin = ping.IsSuccessStatusCode;
+        }
+        catch { isAdmin = false; }
+    }
+
+    int GetTodayCount(string tab) => tab == "songs" ? todaySongs : todayMovies;
+
+    bool IsSubmitDisabled =>
+        string.IsNullOrWhiteSpace(titleInput?.Trim())
+        || (!isAdmin && GetTodayCount(activeTab) >= 5);
+
+    async Task SwitchTab(string tab)
+    {
+        activeTab = tab?.Trim() ?? "songs";
+        feedback = "";
+
+        adminQuery = "";
+        adminSort = "date_desc";
+
+        if (activeTab.StartsWith("admin", StringComparison.Ordinal))
+            await LoadAdminTab();
+    }
+
+    async Task RefreshCounts()
+    {
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            var counts = await client.GetFromJsonAsync<CountsDto>("api/proposals/my-counts");
+            todaySongs = counts?.Songs ?? 0;
+            todayMovies = counts?.Movies ?? 0;
+        }
+        catch { /* pomijamy */ }
+    }
+
+    async Task SubmitProposal()
+    {
+        feedback = "";
+        if (IsSubmitDisabled) return;
+
+        var payload = new CreateProposal { Type = activeTab == "songs" ? "song" : "movie", Title = titleInput.Trim(), ArtistOrNote = string.IsNullOrWhiteSpace(noteInput) ? null : noteInput.Trim() };
+
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            var resp = await client.PostAsJsonAsync("api/proposals", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                if (activeTab == "songs") todaySongs++; else todayMovies++;
+                titleInput = ""; noteInput = "";
+                feedback = "✅ Wysłano propozycję. Dziękujemy!";
+            }
+            else
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                feedback = $"❗ {msg}";
+            }
+        }
+        catch
+        {
+            feedback = "❗ Błąd sieci.";
+        }
+    }
+
+
+    // ADMIN
+    async Task LoadAdminTab()
+    {
+        loadingAdmin = true;
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            if (activeTab == "admin-pending")
+            {
+                pending = await client.GetFromJsonAsync<List<ProposalDto>>("api/admin/pending-proposals") ?? new();
+            }
+            else if (activeTab == "admin-approved")
+            {
+                approved = await client.GetFromJsonAsync<List<ProposalDto>>("api/admin/approved-proposals") ?? new();
+            }
+        }
+        catch { /* zignoruj */ }
+        finally { loadingAdmin = false; }
+    }
+
+    async Task Review(Guid id, bool approve)
+    {
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            var resp = await client.PostAsJsonAsync($"api/admin/review/{id}?action={(approve ? "approve" : "reject")}", (string?)null);
+            if (resp.IsSuccessStatusCode)
+            {
+                pending = pending.Where(p => p.Id != id).ToList();
+                if (approve) await LoadAdminTab(); // odśwież zatwierdzone jeśli ta zakładka jest otwarta
+            }
+        }
+        catch { /* pomijamy */ }
+    }
+
+    // DTOs
+    class CreateProposal { public string Type { get; set; } = ""; public string Title { get; set; } = ""; public string? ArtistOrNote { get; set; } }
+    class CountsDto { public int Songs { get; set; } public int Movies { get; set; } }
+
+    IEnumerable<ProposalDto> AdminViewItems
+    {
+        get
+        {
+            var list = activeTab == "admin-pending"
+                ? pending.AsEnumerable()
+                : approved.AsEnumerable();
+
+            // Filtrowanie (bez polskich znaków i bez rozróżniania wielkości)
+            if (!string.IsNullOrWhiteSpace(adminQuery))
+            {
+                var q = Norm(adminQuery);
+                list = list.Where(p =>
+                    Norm(p.Title).Contains(q)
+                    || Norm(p.ArtistOrNote).Contains(q)
+                    || Norm(p.User?.Username).Contains(q)
+                    || Norm(p.Type).Contains(q)
+                );
+            }
+
+            // Sortowanie
+            list = adminSort switch
+            {
+                "title_asc" => list.OrderBy(p => Norm(p.Title)),
+                "title_desc" => list.OrderByDescending(p => Norm(p.Title)),
+                "date_asc" => list.OrderBy(p => AdminDate(p)),
+                _ => list.OrderByDescending(p => AdminDate(p)) // "date_desc"
+            };
+
+            return list;
+        }
+    }
+
+    DateTime AdminDate(ProposalDto p)
+        => activeTab == "admin-approved"
+            ? (p.ReviewedAt ?? p.CreatedAt)
+            : p.CreatedAt;
+
+    // Normalizacja stringów: lower + bez znaków diakrytycznych
+    static string Norm(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "";
+        var lower = s.ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(lower.Length);
+        foreach (var c in lower)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+        return sb.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    async Task FinalizeApproved(Guid id)
+    {
+        if (processing.Contains(id)) return;
+        processing.Add(id);
+        adminMsg = "";
+
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            var resp = await client.PostAsJsonAsync($"api/admin/finalize/{id}", (string?)null);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                // usuń z UI
+                approved = approved.Where(x => x.Id != id).ToList();
+                adminMsg = "✅ Oznaczono jako dodane do bazy.";
+            }
+            else
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                adminMsg = $"❗ Nie udało się oznaczyć: {msg}";
+            }
+        }
+        catch
+        {
+            adminMsg = "❗ Błąd sieci.";
+        }
+        finally
+        {
+            processing.Remove(id);
+            StateHasChanged();
+        }
+    }
+}

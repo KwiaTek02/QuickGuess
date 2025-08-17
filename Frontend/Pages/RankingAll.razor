@@ -1,0 +1,203 @@
+﻿@page "/ranking"
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@using System.Net
+
+<div class="game-fullscreen has-fixed-title">
+    <h1 class="game-title">🌐 Pełny ranking graczy</h1>
+
+    <div class="profile-container ranking-shell">
+        <div class="card ranking-box">
+            <div class="box-title-row">
+                <h3 class="box-title" style="margin: 0 0 .4rem;">🏆 Ogólne — wszyscy gracze</h3>
+
+                <!-- SZUKAJKA -->
+                <div style="display:flex; align-items:center; gap:.5rem;">
+                    <input class="admin-search"
+                           style="width:260px"
+                           placeholder="Szukaj gracza…"
+                           @bind="search"
+                           @bind:event="oninput" />
+                    @if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        <button class="lb-more-btn" @onclick="ClearSearch" title="Wyczyść wyszukiwanie">Wyczyść</button>
+                    }
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="lb-list-wrap">
+                    <ul class="lb-list">
+                        @for (int i = 0; i < 20; i++)
+                        {
+                            <li class="lb-row skeleton">
+                                <div class="lb-place"><div class="sk-place"></div></div>
+                                <div class="lb-user">
+                                    <div class="sk-avatar"></div>
+                                    <div class="meta">
+                                        <div class="sk-line w60"></div>
+                                        <div class="sk-bar"></div>
+                                    </div>
+                                </div>
+                                <div class="lb-score"><div class="sk-score"></div></div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                var rows = string.IsNullOrWhiteSpace(search)
+                ? leaderboard
+                : leaderboard
+                .Where(r => r.Username.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+                if (rows.Count == 0)
+                {
+                    <p class="lb-empty">Brak graczy pasujących do „@search”.</p>
+                }
+                else
+                {
+                    <div class="lb-list-wrap">
+                        <ul class="lb-list">
+                            @foreach (var row in rows)
+                            {
+                                var me = IsMe(row.Username);
+                                var place = OriginalPlace(row); // pozycja w pełnym rankingu (1-n)
+
+                                <li class="lb-row @(place <= 3 ? $"top{place}" : null) @(me ? "is-me" : null)"
+                                    role="button"
+                                    title="Zobacz profil"
+                                    @onclick="() => OpenProfile(row.Username, row.Id)">
+                                    <div class="lb-place">
+                                        @if (place == 1)
+                                        {
+                                            <span class="medal gold">🥇</span>
+                                            ;
+                                        }
+                                        else if (place == 2)
+                                        {
+                                            <span class="medal silver">🥈</span>
+                                            ;
+                                        }
+                                        else if (place == 3)
+                                        {
+                                            <span class="medal bronze">🥉</span>
+                                            ;
+                                        }
+                                        else
+                                        {
+                                            <span class="num">@place</span>
+                                            ;
+                                        }
+                                    </div>
+
+                                    <div class="lb-user">
+                                        <div class="avatar @(me ? "me" : null)">@row.Username[..1].ToUpper()</div>
+                                        <div class="meta">
+                                            <div class="name" title="@row.Username">@row.Username @(me ? " (Ty)" : null)</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="lb-score">@row.Score<span class="unit"> pkt</span></div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = true;
+    private string? userFromStorage;
+    private string search = "";
+
+    private record Row(Guid? Id, string Username, int Score);
+    private List<Row> leaderboard = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        userFromStorage = await JS.InvokeAsync<string>("localStorage.getItem", "authUser");
+        await LoadAll();
+    }
+
+    private bool IsMe(string username) =>
+        !string.IsNullOrWhiteSpace(userFromStorage) &&
+        string.Equals(username, userFromStorage, StringComparison.OrdinalIgnoreCase);
+
+    private async Task LoadAll()
+    {
+        isLoading = true;
+        leaderboard.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var data = await Http.GetFromJsonAsync<List<GlobalAllEntry>>("api/leaderboard/global-all");
+            leaderboard = (data ?? new()).Select(e => new Row(e.PublicId, e.Username, e.Score)).ToList();
+        }
+        finally { isLoading = false; }
+    }
+
+    private void ClearSearch() => search = "";
+
+    // pozycja gracza w pełnym rankingu (1..N), używana także po przefiltrowaniu
+    private int OriginalPlace(Row r)
+        => leaderboard.FindIndex(x => string.Equals(x.Username, r.Username, StringComparison.OrdinalIgnoreCase)) + 1;
+
+    private async Task OpenProfile(string username, Guid? id)
+    {
+        if (id.HasValue && id.Value != Guid.Empty)
+        {
+            Nav.NavigateTo($"/profil/{id.Value}");
+            return;
+        }
+
+        var encoded = WebUtility.UrlEncode(username);
+        try
+        {
+            var p1 = await Http.GetFromJsonAsync<ProfileLookup>($"/api/profile/username/{encoded}");
+            if (p1 is not null && p1.PublicId != Guid.Empty)
+            {
+                Nav.NavigateTo($"/profil/{p1.PublicId}");
+                return;
+            }
+        }
+        catch { }
+
+        try
+        {
+            var p2 = await Http.GetFromJsonAsync<ProfileLookup>($"/api/profile/lookup?username={encoded}");
+            if (p2 is not null && p2.PublicId != Guid.Empty)
+            {
+                Nav.NavigateTo($"/profil/{p2.PublicId}");
+                return;
+            }
+        }
+        catch { }
+
+        await JS.InvokeVoidAsync("alert", "Nie udało się otworzyć profilu tego gracza.");
+    }
+
+    // DTO pod endpoint „global-all”
+    private class GlobalAllEntry
+    {
+        public Guid? PublicId { get; set; }
+        public string Username { get; set; } = "";
+        public int Score { get; set; } // mapowane atrybutem ponizej
+        [System.Text.Json.Serialization.JsonPropertyName("scoreTotal")]
+        public int ScoreTotal { get => Score; set => Score = value; }
+    }
+
+    private class ProfileLookup
+    {
+        public Guid PublicId { get; set; }
+        public string Username { get; set; } = "";
+    }
+}

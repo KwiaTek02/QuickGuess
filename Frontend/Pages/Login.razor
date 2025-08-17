@@ -3,6 +3,7 @@
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="fullscreen-bg">
     <div class="login-card enhanced">
@@ -29,11 +30,9 @@
 
         <button @onclick="LoginUser" class="btn login-btn">Zaloguj się</button>
 
-        <div class="google-btn-wrapper">
-            <button class="google-btn">
-                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon" />
-                Zaloguj się przez Google
-            </button>
+        <div class="google-btn-wrapper" style="margin-top: 0.75rem;">
+            
+            <div id="gsi_btn"></div>
         </div>
 
         <div class="auth-links center-row">
@@ -48,6 +47,36 @@
     string Password = "";
     string Error = "";
 
+    private const string GoogleClientId = "628190551033-vgs07tcj28liadrpe05ajpfh7u083qga.apps.googleusercontent.com";
+
+    private DotNetObjectReference<Login>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+        // init + render oficjalnego przycisku
+        await JS.InvokeVoidAsync("googleAuth.init", GoogleClientId, _dotNetRef);
+        await JS.InvokeVoidAsync("googleAuth.renderButton", "gsi_btn"); // theme/size itp. bierzemy z JS
+    }
+
+    [JSInvokable]
+    public async Task OnGoogleCredential(string credential)
+    {
+        // credential = ID token (JWT) od Google
+        var ok = await AuthService.GoogleLogin(credential);
+        if (ok)
+        {
+            Navigation.NavigateTo("/panel", true);
+        }
+        else
+        {
+            Error = "Logowanie Google nie powiodło się.";
+            StateHasChanged();
+        }
+    }
+
     private async Task LoginUser()
     {
         var success = await AuthService.Login(Email, Password);
@@ -59,6 +88,11 @@
         {
             Navigation.NavigateTo("/panel");
         }
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
     }
 
 }

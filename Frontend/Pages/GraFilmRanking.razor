@@ -119,21 +119,68 @@
                 </div>
             }
 
+            @* === NOWY TYPEAHEAD jak w piosenkach === *@
             <div class="film-input-wrapper-guess" id="guess-wrapper">
-                <input class="film-guess-input" placeholder="🎬 Zgadnij tytuł..."
-                       @bind="Guess" @oninput="OnInput" disabled="@Answered" />
+                <div class="typeahead">
+                    <input class="guess-input typeahead__input"
+                           placeholder="🎬 Zgadnij tytuł…"
+                           value="@Guess"
+                           @oninput="OnInput"
+                           @onkeydown="OnKeyDown"
+                           @onfocus="() => OpenSuggestions = TitleSuggestions?.Any() == true"
+                           aria-autocomplete="list"
+                           aria-controls="title-suggestions"
+                           aria-expanded="@OpenSuggestions"
+                           aria-activedescendant="@(ActiveIndex >= 0 ? $"sug-{ActiveIndex}" : null)"
+                           disabled="@Answered" />
 
-                @if (TitleSuggestions.Any())
-                {
-                    <ul class="film-suggestions-list">
-                        @foreach (var title in TitleSuggestions)
+                    <button class="submit-btn film-submit-btn" @onclick="SubmitGuess" disabled="@Answered">
+                        ✅ Zatwierdź
+                    </button>
+
+                    <div class="typeahead__panel @(OpenSuggestions ? "is-open" : "")" id="title-suggestions" role="listbox">
+                        @if (SuggestionsLoading)
                         {
-                            <li @onclick="@(() => SelectSuggestion(title))">@title</li>
+                            <ul class="sug-list">
+                                @for (var i = 0; i < 5; i++)
+                                {
+                                    <li class="sug-item is-skeleton">
+                                        <span class="sug-icon"></span>
+                                        <span class="skeleton-line w60"></span>
+                                        <kbd class="sug-kbd">Enter</kbd>
+                                    </li>
+                                }
+                            </ul>
                         }
-                    </ul>
-                }
-
-                <button class="film-submit-btn" @onclick="SubmitGuess" disabled="@Answered">✅ Zatwierdź</button>
+                        else if (TitleSuggestions.Any())
+                        {
+                            <ul class="sug-list">
+                                @for (var i = 0; i < TitleSuggestions.Count; i++)
+                                {
+                                    var t = TitleSuggestions[i];
+                                    <li id="@($"sug-{i}")"
+                                        role="option"
+                                        class="sug-item @(i == ActiveIndex ? "is-active" : "")"
+                                        @onmouseenter="@(() => ActiveIndex = i)"
+                                        @onmousedown="@(() => SelectSuggestion(t))">
+                                        <i class="fas fa-film sug-icon" aria-hidden="true"></i>
+                                        <div class="sug-text">@((MarkupString)HighlightMatch(t, Guess))</div>
+                                        <kbd class="sug-kbd">Enter</kbd>
+                                    </li>
+                                }
+                            </ul>
+                            <div class="typeahead__footer hint">
+                                <span><kbd>↑</kbd><kbd>↓</kbd> – wybór • <kbd>Enter</kbd> – wstaw • <kbd>Esc</kbd> – zamknij</span>
+                            </div>
+                        }
+                        else if (!SuggestionsLoading && OpenSuggestions)
+                        {
+                            <div class="typeahead__empty">
+                                Brak podpowiedzi dla <strong>@Guess</strong>.
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -171,7 +218,15 @@
     protected bool Answered = false;
     protected string ResultMessage = "";
     protected DateTime StartTime;
+
     private List<string> TitleSuggestions = new();
+
+    // Typeahead state
+    private bool OpenSuggestions = false;
+    private bool SuggestionsLoading = false;
+    private int ActiveIndex = -1;
+    private CancellationTokenSource? _sugCts;
+
     private int Countdown = 20; // (używany przez Timer.js do UI)
     private Guid GameSessionId = Guid.NewGuid();
 
@@ -198,14 +253,45 @@
 
     private async Task OnInput(ChangeEventArgs e)
     {
-        Guess = e.Value?.ToString() ?? "";
-        if (Guess.Length >= 2)
-        {
-            TitleSuggestions = await Http.GetFromJsonAsync<List<string>>($"/api/movies/titles?query={Guess}");
-        }
-        else
+        Guess = e.Value?.ToString() ?? string.Empty;
+
+        _sugCts?.Cancel();
+        TitleSuggestions ??= new();
+        if (string.IsNullOrWhiteSpace(Guess) || Guess.Length < 2)
         {
             TitleSuggestions.Clear();
+            OpenSuggestions = false;
+            ActiveIndex = -1;
+            SuggestionsLoading = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        SuggestionsLoading = true;
+        OpenSuggestions = true;
+        ActiveIndex = 0;
+        await InvokeAsync(StateHasChanged);
+
+        var cts = new CancellationTokenSource();
+        _sugCts = cts;
+
+        try
+        {
+            await Task.Delay(180, cts.Token);
+            var url = $"/api/movies/titles?query={Uri.EscapeDataString(Guess)}";
+            var resp = await Http.GetFromJsonAsync<List<string>>(url, cts.Token);
+            TitleSuggestions = resp ?? new();
+        }
+        catch (TaskCanceledException) { return; }
+        finally
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                SuggestionsLoading = false;
+                OpenSuggestions = TitleSuggestions.Count > 0;
+                ActiveIndex = OpenSuggestions ? 0 : -1;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
@@ -213,6 +299,7 @@
     {
         Guess = title;
         TitleSuggestions.Clear();
+        CloseSuggestions();
     }
 
     protected async Task StartGame()
@@ -305,5 +392,62 @@
             return cleaned.Trim();
         }
         return input.Trim();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (Answered) return;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (TitleSuggestions.Count > 0)
+                {
+                    OpenSuggestions = true;
+                    ActiveIndex = (ActiveIndex + 1) % TitleSuggestions.Count;
+                }
+                break;
+
+            case "ArrowUp":
+                if (TitleSuggestions.Count > 0)
+                {
+                    OpenSuggestions = true;
+                    ActiveIndex = (ActiveIndex <= 0 ? TitleSuggestions.Count - 1 : ActiveIndex - 1);
+                }
+                break;
+
+            case "Enter":
+                if (OpenSuggestions && ActiveIndex >= 0 && ActiveIndex < TitleSuggestions.Count)
+                    SelectSuggestion(TitleSuggestions[ActiveIndex]);
+                else
+                    await SubmitGuess();
+                break;
+
+            case "Escape":
+                CloseSuggestions();
+                break;
+        }
+    }
+
+    private void CloseSuggestions()
+    {
+        OpenSuggestions = false;
+        ActiveIndex = -1;
+        SuggestionsLoading = false;
+    }
+
+    private static string HighlightMatch(string text, string query)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return System.Net.WebUtility.HtmlEncode(text);
+        if (string.IsNullOrWhiteSpace(query)) return System.Net.WebUtility.HtmlEncode(text);
+
+        var idx = text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return System.Net.WebUtility.HtmlEncode(text);
+
+        var before = System.Net.WebUtility.HtmlEncode(text[..idx]);
+        var match = System.Net.WebUtility.HtmlEncode(text.Substring(idx, query.Length));
+        var after = System.Net.WebUtility.HtmlEncode(text[(idx + query.Length)..]);
+
+        return $"{before}<mark>{match}</mark>{after}";
     }
 }

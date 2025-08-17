@@ -1,4 +1,5 @@
 ﻿using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuickGuess.Data;
@@ -7,6 +8,7 @@ using QuickGuess.Models;
 using QuickGuess.Services.Auth;
 using System.Net;
 using System.Net.Mail;
+using System.Security.Claims;
 using System.Text;
 
 namespace QuickGuess.Controllers
@@ -31,6 +33,8 @@ namespace QuickGuess.Controllers
         private readonly string _smtpUser;
         private readonly string _smtpPassword;
 
+        private readonly string _googleClientId;
+
         public AuthController(IConfiguration config)
         {
             _jwt = new JwtTokenGenerator(config);
@@ -43,6 +47,8 @@ namespace QuickGuess.Controllers
             _smtpPort = int.TryParse(config["Smtp:Port"], out var p) ? p : 587;
             _smtpUser = config["Smtp:User"] ?? _supportEmail;
             _smtpPassword = config["Smtp:Password"] ?? ""; // ustaw przez Secret/ENV
+
+            _googleClientId = config["GoogleAuth:ClientId"] ?? throw new InvalidOperationException("GoogleAuth:ClientId not set");
         }
 
         // ======================= AUTH =======================
@@ -62,7 +68,8 @@ namespace QuickGuess.Controllers
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 Provider = "local",
-                AccountType = "user"
+                AccountType = "user",
+                PublicId = Guid.NewGuid()
             };
 
             db.Users.Add(user);
@@ -96,43 +103,9 @@ namespace QuickGuess.Controllers
             if (!user.EmailVerified)
                 return Unauthorized("Please verify your email first.");
 
-            var token = _jwt.GenerateToken(user);
-            return Ok(new AuthResponse
+            if (user.PublicId is null || user.PublicId == Guid.Empty)
             {
-                Token = token,
-                Username = user.Username,
-                Email = user.Email,
-                Role = user.AccountType
-            });
-        }
-
-        [HttpPost("google-login")]
-        public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request, [FromServices] ApplicationDbContext db)
-        {
-            GoogleJsonWebSignature.Payload payload;
-            try
-            {
-                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
-            }
-            catch
-            {
-                return Unauthorized("Invalid Google token");
-            }
-
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email && u.Provider == "google");
-
-            if (user == null)
-            {
-                user = new User
-                {
-                    Email = payload.Email,
-                    Username = payload.Name ?? payload.Email.Split('@')[0],
-                    EmailVerified = true,
-                    Provider = "google",
-                    GoogleId = payload.Subject,
-                    AccountType = "user"
-                };
-                db.Users.Add(user);
+                user.PublicId = Guid.NewGuid();
                 await db.SaveChangesAsync();
             }
 
@@ -142,9 +115,81 @@ namespace QuickGuess.Controllers
                 Token = token,
                 Username = user.Username,
                 Email = user.Email,
-                Role = user.AccountType
+                Role = user.AccountType,
+                PublicId = user.PublicId!.Value
             });
         }
+
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request, [FromServices] ApplicationDbContext db)
+        {
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(
+                    request.IdToken,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { _googleClientId }
+                    });
+            }
+            catch
+            {
+                return Unauthorized("Invalid Google token");
+            }
+
+            var email = (payload.Email ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized("Google token has no email");
+
+            // ⬇️ KLUCZ: szukamy po e-mailu, niezależnie od provider'a
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
+
+            if (user == null)
+            {
+                // brak konta – tworzymy nowe „google”
+                user = new User
+                {
+                    Email = payload.Email,
+                    Username = payload.Name ?? payload.Email.Split('@')[0],
+                    EmailVerified = true, 
+                    Provider = "google",
+                    GoogleId = payload.Subject,
+                    AccountType = "user",
+                    PublicId = Guid.NewGuid()
+                };
+                db.Users.Add(user);
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+                // konto już istnieje (np. 'local') – podpinamy Google do TEGO konta
+                if (string.IsNullOrWhiteSpace(user.GoogleId))
+                    user.GoogleId = payload.Subject;
+
+                // jeśli konto lokalne nie było zweryfikowane – uznaj weryfikację Google
+                if (!user.EmailVerified)
+                    user.EmailVerified = true;    
+                
+
+                // nie musimy zmieniać 'Provider' – konto może pozostać 'local'
+                if (user.PublicId is null || user.PublicId == Guid.Empty)
+                    user.PublicId = Guid.NewGuid();
+
+                await db.SaveChangesAsync();
+            }
+
+            var token = _jwt.GenerateToken(user);
+            return Ok(new AuthResponse
+            {
+                Token = token,
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.AccountType,
+                PublicId = user.PublicId!.Value
+            });
+        }
+
 
         [HttpGet("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string token, [FromServices] ApplicationDbContext db)
@@ -203,7 +248,66 @@ namespace QuickGuess.Controllers
             return Ok("Password updated successfully.");
         }
 
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, [FromServices] ApplicationDbContext db)
+        {
+            // 1) spróbuj ID jako int z kilku znanych claimów
+            int? userId = null;
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirst("uid")
+                       ?? User.FindFirst("id")
+                       ?? User.FindFirst("sub");
+
+            if (idClaim != null && int.TryParse(idClaim.Value, out var parsed))
+                userId = parsed;
+
+            QuickGuess.Models.User? user = null;
+
+            if (userId.HasValue)
+            {
+                user = await db.Users.FindAsync(userId.Value);
+            }
+            else
+            {
+                // 2) fallback: znajdź po e-mailu z tokena
+                var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
+                if (!string.IsNullOrWhiteSpace(email))
+                    user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+            }
+
+            if (user == null)
+                return BadRequest("Nie udało się zidentyfikować użytkownika z tokenu.");
+
+            if (user.Provider != "local")
+                return BadRequest("Hasło można zmienić tylko dla kont lokalnych.");
+
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+                return BadRequest("Brak wymaganych pól.");
+
+            if (!PasswordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash!, user.PasswordSalt!))
+                return BadRequest("Obecne hasło jest nieprawidłowe.");
+
+            bool ok = request.NewPassword.Length >= 8
+                      && request.NewPassword.Any(char.IsUpper)
+                      && request.NewPassword.Any(char.IsLower)
+                      && request.NewPassword.Any(char.IsDigit)
+                      && request.NewPassword.Any(c => !char.IsLetterOrDigit(c));
+            if (!ok)
+                return BadRequest("Nowe hasło nie spełnia wymagań bezpieczeństwa.");
+
+            PasswordHasher.CreateHash(request.NewPassword, out string hash, out string salt);
+            user.PasswordHash = hash;
+            user.PasswordSalt = salt;
+
+            await db.SaveChangesAsync();
+            return Ok("Password updated successfully.");
+        }
+
+
         // ======================= MAILE =======================
+
+
 
         private async Task SendVerificationEmail(string email, string token)
         {

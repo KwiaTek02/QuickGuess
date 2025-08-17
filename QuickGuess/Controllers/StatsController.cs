@@ -127,6 +127,93 @@ namespace QuickGuess.Controllers
             };
         }
 
+        [HttpGet("user/{publicId:guid}/song-ranking")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PlayerSongStatsDto>> GetSongRankingFor(Guid publicId)
+        {
+            var userId = await _db.Users.Where(u => u.PublicId == publicId)
+                                        .Select(u => u.Id)
+                                        .FirstOrDefaultAsync();
+            if (userId == default) return NotFound();
+
+            var q = _db.Guesses.AsNoTracking()
+                .Where(g => g.UserId == userId && g.Type == "song" && g.Mode == "ranking");
+
+            // --- identycznie jak w GetMySongRankingStats() ---
+            var games = await q.CountAsync();
+            var correct = await q.CountAsync(g => g.Correct);
+            var incorrect = games - correct;
+            var winRate = games > 0 ? (double)correct / games : 0.0;
+            var bestTime = await q.Where(g => g.Correct).Select(g => (int?)g.Duration).MinAsync() ?? 0;
+            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+
+            var totalScore = await _db.Leaderboards.Where(l => l.UserId == userId)
+                                 .Select(l => (int?)l.ScoreSongs).FirstOrDefaultAsync()
+                             ?? await q.SumAsync(g => g.Score);
+
+            var myScore = await _db.Leaderboards.Where(l => l.UserId == userId)
+                              .Select(l => (int?)l.ScoreSongs).FirstOrDefaultAsync() ?? totalScore;
+
+            var rankingPosition = myScore > 0
+                ? await _db.Leaderboards.CountAsync(l => l.ScoreSongs > myScore) + 1
+                : 0;
+
+            return new PlayerSongStatsDto
+            {
+                Games = games,
+                Correct = correct,
+                Incorrect = incorrect,
+                WinRate = winRate,
+                RankingPosition = Math.Max(rankingPosition, 0),
+                BestTimeSec = bestTime,
+                AvgTimeSec = avgTime,
+                TotalScore = totalScore
+            };
+        }
+
+        [HttpGet("user/{publicId:guid}/movie-ranking")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PlayerMovieStatsDto>> GetMovieRankingFor(Guid publicId)
+        {
+            var userId = await _db.Users.Where(u => u.PublicId == publicId)
+                                        .Select(u => u.Id).FirstOrDefaultAsync();
+            if (userId == default) return NotFound();
+
+            var q = _db.Guesses.AsNoTracking()
+                .Where(g => g.UserId == userId && g.Type == "movie" && g.Mode == "ranking");
+
+            var games = await q.CountAsync();
+            var correct = await q.CountAsync(g => g.Correct);
+            var incorrect = games - correct;
+            var winRate = games > 0 ? (double)correct / games : 0.0;
+            var bestTime = await q.Where(g => g.Correct).Select(g => (int?)g.Duration).MinAsync() ?? 0;
+            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+
+            var totalScore = await _db.Leaderboards.Where(l => l.UserId == userId)
+                                 .Select(l => (int?)l.ScoreMovies).FirstOrDefaultAsync()
+                             ?? await q.SumAsync(g => g.Score);
+
+            var myScore = await _db.Leaderboards.Where(l => l.UserId == userId)
+                              .Select(l => (int?)l.ScoreMovies).FirstOrDefaultAsync() ?? totalScore;
+
+            var rankingPosition = myScore > 0
+                ? await _db.Leaderboards.CountAsync(l => l.ScoreMovies > myScore) + 1
+                : 0;
+
+            return new PlayerMovieStatsDto
+            {
+                Games = games,
+                Correct = correct,
+                Incorrect = incorrect,
+                WinRate = winRate,
+                RankingPosition = Math.Max(rankingPosition, 0),
+                BestTimeSec = bestTime,
+                AvgTimeSec = avgTime,
+                TotalScore = totalScore
+            };
+        }
+
+
 
     }
 }

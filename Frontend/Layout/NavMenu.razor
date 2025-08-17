@@ -34,7 +34,7 @@
 
                     <button class="dd-item" @onclick="GoReset">
                         <i class="bi bi-shield-lock"></i>
-                        Resetuj hasło
+                        Zmień hasło
                     </button>
 
                     <div class="dd-divider"></div>
@@ -90,14 +90,20 @@
     private void ToggleMenu() => IsMenuOpen = !IsMenuOpen;
 
     // „Na razie nic nie robią” – zostawiam puste nawigacje /
-    private void GoProfile()
+    private async void GoProfile()
     {
         // TODO: Navigation.NavigateTo("/profile");
+        var id = await JS.InvokeAsync<string>("localStorage.getItem", "authId");
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            Navigation.NavigateTo($"/profil/{id}");
+        }
     }
 
     private void GoReset()
     {
         // TODO: Navigation.NavigateTo("/account/reset");
+        Navigation.NavigateTo("/change-password");
     }
 
     private async Task Logout()

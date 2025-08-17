@@ -1,24 +1,164 @@
 ﻿@page "/panel"
+@using System.Net.Http.Json
+@using Frontend.Services
 @inject NavigationManager Navigation
+@inject AuthorizedHttpClient AuthHttp
 
 <div class="player-panel">
     <div class="left-panel">
         <h2 class="section-title">🎮 Panel gracza</h2>
 
         <div class="mode-buttons">
-            <button class="mode-btn music" @onclick='() => Navigation.NavigateTo("/panel-piosenka")'>🎵 Tryb Piosenka</button>
-            <button class="mode-btn film" @onclick='() => Navigation.NavigateTo("/panel-film")'>🎬 Tryb Film</button>
+            <button class="mode-btn music" @onclick='() => Navigation.NavigateTo("/panel-piosenka")'>🎵 Jaka To Piosenka?</button>
+            <button class="mode-btn film" @onclick='() => Navigation.NavigateTo("/panel-film")'>🎬 Jaki To Film?</button>
         </div>
 
         <div class="stats-box">
-            <h3 class="box-title">📊 Twoje statystyki</h3>
-            <ul>
-                <li>Liczba gier rankingowych: ...</li>
-                <li>Średni wynik: ...</li>
-                <li>Najlepszy wynik: ...</li>
-                <li>Poprawne odpowiedzi: ...</li>
-            </ul>
+            <div class="box-title-row">
+                <h3 class="box-title">📊 Twoje statystyki (ranking)</h3>
+                <button class="btn-modal neutral" @onclick="RefreshCurrent" disabled="@IsLoading">Odśwież</button>
+            </div>
+
+            <!-- Własne zakładki statystyk (nie wpływają na TOP10) -->
+            <div class="tabs tabs--inside-card">
+                <button class="tab @(ActiveTab == StatTab.Song ? "active" : null)"
+                        @onclick="() => SwitchTab(StatTab.Song)">
+                    🎵 Piosenka
+                </button>
+                <button class="tab @(ActiveTab == StatTab.Film ? "active" : null)"
+                        @onclick="() => SwitchTab(StatTab.Film)">
+                    🎬 Film
+                </button>
+            </div>
+
+            @if (ActiveTab == StatTab.Song)
+            {
+                @* SONG *@
+                @if (loadingSong)
+                {
+                    <div class="stats-grid">
+                        @for (var i = 0; i < 8; i++)
+                        {
+                            <div class="stat skeleton">
+                                <div class="sk-line" style="width:55%"></div>
+                                <div class="sk-bar" style="height:18px;margin-top:.4rem"></div>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(errorSong))
+                {
+                    <div class="lb-empty">❗ @errorSong</div>
+                }
+                else if (SongStats is null)
+                {
+                    <div class="lb-empty">Brak danych statystycznych.</div>
+                }
+                else
+                {
+                    <div class="stats-grid">
+                        <div class="stat">
+                            <div class="stat-label">🎮 Rozegrane gry</div>
+                            <div class="stat-value">@SongStats.Games</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">✔️ Trafionych&nbsp;/&nbsp;❌ Nietrafionych</div>
+                            <div class="stat-value">@SongStats.Correct / @SongStats.Incorrect</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">📈 % wygranych</div>
+                            <div class="stat-value">@($"{SongStats.WinRate:P0}")</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">⚡ Najszybsza odpowiedź</div>
+                            <div class="stat-value">@SongStats.BestTimeSec s</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">⏳ Średni czas</div>
+                            <div class="stat-value">@($"{SongStats.AvgTimeSec:0.0} s")</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">💯 Łączny wynik</div>
+                            <div class="stat-value">@SongStats.TotalScore pkt</div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                @* FILM *@
+                @if (loadingMovie)
+                {
+                    <div class="stats-grid">
+                        @for (var i = 0; i < 8; i++)
+                        {
+                            <div class="stat skeleton">
+                                <div class="sk-line" style="width:55%"></div>
+                                <div class="sk-bar" style="height:18px;margin-top:.4rem"></div>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(errorMovie))
+                {
+                    <div class="lb-empty">❗ @errorMovie</div>
+                }
+                else if (MovieStats is null)
+                {
+                    <div class="lb-empty">Brak danych statystycznych.</div>
+                }
+                else
+                {
+                    <div class="stats-grid">
+                        <div class="stat">
+                            <div class="stat-label">🎮 Rozegrane gry</div>
+                            <div class="stat-value">@MovieStats.Games</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">✔️ Trafionych&nbsp;/&nbsp;❌ Nietrafionych</div>
+                            <div class="stat-value">@MovieStats.Correct / @MovieStats.Incorrect</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">📈 % wygranych</div>
+                            <div class="stat-value">@($"{MovieStats.WinRate:P0}")</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">⚡ Najszybsza odpowiedź</div>
+                            <div class="stat-value">@MovieStats.BestTimeSec s</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">⏳ Średni czas</div>
+                            <div class="stat-value">@($"{MovieStats.AvgTimeSec:0.0} s")</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">💯 Łączny wynik</div>
+                            <div class="stat-value">@MovieStats.TotalScore pkt</div>
+                        </div>
+                    </div>
+                }
+            }
         </div>
+        
+        <div class="proposal-cta card">
+            <div class="cta-icon">✨</div>
+
+            <div class="cta-content">
+                <h4 class="cta-title">Masz pomysł na nowe tytuły?</h4>
+                <p class="cta-desc">
+                    Jeśli chcesz zaproponować <strong>nowe piosenki</strong> lub <strong>filmy</strong> do dodania,
+                    kliknij przycisk poniżej.
+                </p>
+
+                <div class="cta-actions">
+                    <button class="btn-modal primary"
+                            title="Przejdź do panelu propozycji"
+                            @onclick='() => Navigation.NavigateTo("/propozycje")'>
+                        📝 Zgłoś propozycje
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="right-panel">
@@ -28,3 +168,110 @@
         </div>
     </div>
 </div>
+
+@code {
+    private enum StatTab { Song, Film }
+    private StatTab ActiveTab = StatTab.Song;
+
+    // STARTOWO: song = true (pokazujemy skeleton), movie = false
+    private bool loadingSong = true, loadingMovie = false;
+    private string? errorSong, errorMovie;
+    private PlayerSongStats? SongStats;
+    private PlayerMovieStats? MovieStats;
+
+    private bool IsLoading => ActiveTab == StatTab.Song ? loadingSong : loadingMovie;
+
+    public class PlayerSongStats
+    {
+        public int Games { get; set; }
+        public int Correct { get; set; }
+        public int Incorrect { get; set; }
+        public double WinRate { get; set; }
+        public int RankingPosition { get; set; }
+        public int BestTimeSec { get; set; }
+        public double AvgTimeSec { get; set; }
+        public int TotalScore { get; set; }
+    }
+
+    public class PlayerMovieStats
+    {
+        public int Games { get; set; }
+        public int Correct { get; set; }
+        public int Incorrect { get; set; }
+        public double WinRate { get; set; }
+        public int RankingPosition { get; set; }
+        public int BestTimeSec { get; set; }
+        public double AvgTimeSec { get; set; }
+        public int TotalScore { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // WAŻNE: wymuś pierwsze ładowanie mimo że loadingSong == true
+        await LoadSongStats(force: true);
+    }
+
+    private async Task SwitchTab(StatTab tab)
+    {
+        if (ActiveTab == tab) return;
+        ActiveTab = tab;
+
+        // leniwe ładowanie dla wybranej zakładki
+        if (tab == StatTab.Song && SongStats is null)
+            await LoadSongStats(force: true);
+        else if (tab == StatTab.Film && MovieStats is null)
+            await LoadMovieStats(force: true);
+    }
+
+    private async Task RefreshCurrent()
+    {
+        if (ActiveTab == StatTab.Song) await LoadSongStats(force: true);
+        else await LoadMovieStats(force: true);
+    }
+
+    private async Task LoadSongStats(bool force = false)
+    {
+        if (loadingSong && !force) return;     // <- respektuj force
+        loadingSong = true;
+        errorSong = null;
+
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            SongStats = await client.GetFromJsonAsync<PlayerSongStats>("/api/stats/me/song-ranking");
+        }
+        catch
+        {
+            errorSong = "Nie udało się załadować statystyk. Spróbuj ponownie.";
+            SongStats = null;
+        }
+        finally
+        {
+            loadingSong = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMovieStats(bool force = false)
+    {
+        if (loadingMovie && !force) return;    // <- respektuj force
+        loadingMovie = true;
+        errorMovie = null;
+
+        try
+        {
+            var client = await AuthHttp.GetClientAsync();
+            MovieStats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
+        }
+        catch
+        {
+            errorMovie = "Nie udało się załadować statystyk. Spróbuj ponownie.";
+            MovieStats = null;
+        }
+        finally
+        {
+            loadingMovie = false;
+            StateHasChanged();
+        }
+    }
+}
