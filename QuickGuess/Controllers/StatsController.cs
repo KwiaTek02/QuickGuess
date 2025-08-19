@@ -38,12 +38,13 @@ namespace QuickGuess.Controllers
             var winRate = games > 0 ? (double)correct / games : 0.0;
 
             // min po nullable int – OK
-            var bestTime = await q.Where(g => g.Correct)
+            var bestMs = await q.Where(g => g.Correct)
                 .Select(g => (int?)g.Duration)
                 .MinAsync() ?? 0;
+            var bestTime = Math.Round(bestMs / 1000.0, 2, MidpointRounding.AwayFromZero);
 
-            // TU była awaria – używamy nullable Average albo warunkowe Average
-            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var avgMs = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var avgTime = avgMs / 1000.0;
             // alternatywnie:
             // var avgTime = await q.AnyAsync() ? await q.AverageAsync(g => (double)g.Duration) : 0.0;
 
@@ -54,11 +55,17 @@ namespace QuickGuess.Controllers
                                  .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
-            // bieżący score do rankingu (songs)
+            // ⛳ nigdy poniżej 0
+            totalScore = Math.Max(totalScore, 0);
+
             var myScore = await _db.Leaderboards
                 .Where(l => l.UserId == userId)
                 .Select(l => (int?)l.ScoreSongs)
                 .FirstOrDefaultAsync() ?? totalScore;
+
+            // (opcjonalnie)
+            myScore = Math.Max(myScore, 0);
+
 
             var rankingPosition = 0;
             if (myScore > 0)
@@ -92,23 +99,30 @@ namespace QuickGuess.Controllers
             var incorrect = games - correct;
             var winRate = games > 0 ? (double)correct / games : 0.0;
 
-            var bestTime = await q.Where(g => g.Correct)
+            var bestMs = await q.Where(g => g.Correct)
                 .Select(g => (int?)g.Duration)
                 .MinAsync() ?? 0;
+            var bestTime = Math.Round(bestMs / 1000.0, 2, MidpointRounding.AwayFromZero);
 
-            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var avgMs = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var avgTime = avgMs / 1000.0;
+
 
             // Suma punktów z leaderboards (kolumna dla filmów) lub fallback do sumy z guesses
             var totalScore = await _db.Leaderboards
                                  .Where(l => l.UserId == userId)
-                                 .Select(l => (int?)l.ScoreMovies)   // jeśli masz nazwę ScoreFilms – zamień tutaj
+                                 .Select(l => (int?)l.ScoreMovies)
                                  .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
+            totalScore = Math.Max(totalScore, 0);
+
             var myScore = await _db.Leaderboards
                 .Where(l => l.UserId == userId)
-                .Select(l => (int?)l.ScoreMovies)                 // jw.
+                .Select(l => (int?)l.ScoreMovies)
                 .FirstOrDefaultAsync() ?? totalScore;
+
+            myScore = Math.Max(myScore, 0);
 
             var rankingPosition = 0;
             if (myScore > 0)
@@ -144,15 +158,28 @@ namespace QuickGuess.Controllers
             var correct = await q.CountAsync(g => g.Correct);
             var incorrect = games - correct;
             var winRate = games > 0 ? (double)correct / games : 0.0;
-            var bestTime = await q.Where(g => g.Correct).Select(g => (int?)g.Duration).MinAsync() ?? 0;
-            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var bestMs = await q.Where(g => g.Correct).Select(g => (int?)g.Duration).MinAsync() ?? 0;
+            var bestTime = (int)Math.Round(bestMs / 1000.0, MidpointRounding.AwayFromZero);
 
-            var totalScore = await _db.Leaderboards.Where(l => l.UserId == userId)
-                                 .Select(l => (int?)l.ScoreSongs).FirstOrDefaultAsync()
+            var avgMs = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var avgTime = avgMs / 1000.0;
+
+            var totalScore = await _db.Leaderboards
+                                 .Where(l => l.UserId == userId)
+                                 .Select(l => (int?)l.ScoreSongs)
+                                 .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
-            var myScore = await _db.Leaderboards.Where(l => l.UserId == userId)
-                              .Select(l => (int?)l.ScoreSongs).FirstOrDefaultAsync() ?? totalScore;
+            // ⛳ nigdy poniżej 0 (fallback z guesses mógłby dać minus)
+            totalScore = Math.Max(totalScore, 0);
+
+            var myScore = await _db.Leaderboards
+                .Where(l => l.UserId == userId)
+                .Select(l => (int?)l.ScoreSongs)
+                .FirstOrDefaultAsync() ?? totalScore;
+
+            // (opcjonalnie) też zaflooruj:
+            myScore = Math.Max(myScore, 0);
 
             var rankingPosition = myScore > 0
                 ? await _db.Leaderboards.CountAsync(l => l.ScoreSongs > myScore) + 1
@@ -171,6 +198,7 @@ namespace QuickGuess.Controllers
             };
         }
 
+
         [HttpGet("user/{publicId:guid}/movie-ranking")]
         [AllowAnonymous]
         public async Task<ActionResult<PlayerMovieStatsDto>> GetMovieRankingFor(Guid publicId)
@@ -186,15 +214,29 @@ namespace QuickGuess.Controllers
             var correct = await q.CountAsync(g => g.Correct);
             var incorrect = games - correct;
             var winRate = games > 0 ? (double)correct / games : 0.0;
-            var bestTime = await q.Where(g => g.Correct).Select(g => (int?)g.Duration).MinAsync() ?? 0;
-            var avgTime = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var bestMs = await q.Where(g => g.Correct).Select(g => (int?)g.Duration).MinAsync() ?? 0;
+            var bestTime = (int)Math.Round(bestMs / 1000.0, MidpointRounding.AwayFromZero);
 
-            var totalScore = await _db.Leaderboards.Where(l => l.UserId == userId)
-                                 .Select(l => (int?)l.ScoreMovies).FirstOrDefaultAsync()
+            var avgMs = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
+            var avgTime = avgMs / 1000.0;
+            var totalScore = await _db.Leaderboards
+                                 .Where(l => l.UserId == userId)
+                                 .Select(l => (int?)l.ScoreMovies)
+                                 .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
-            var myScore = await _db.Leaderboards.Where(l => l.UserId == userId)
-                              .Select(l => (int?)l.ScoreMovies).FirstOrDefaultAsync() ?? totalScore;
+            // ⛳ nigdy poniżej 0 (fallback z guesses mógłby dać minus)
+            totalScore = Math.Max(totalScore, 0);
+
+
+
+            var myScore = await _db.Leaderboards
+                .Where(l => l.UserId == userId)
+                .Select(l => (int?)l.ScoreMovies)
+                .FirstOrDefaultAsync() ?? totalScore;
+
+            // (opcjonalnie) też zaflooruj:
+            myScore = Math.Max(myScore, 0);
 
             var rankingPosition = myScore > 0
                 ? await _db.Leaderboards.CountAsync(l => l.ScoreMovies > myScore) + 1
