@@ -83,7 +83,7 @@
                         }
                         else if (ActiveTab == "songs")
                         {
-                            <section class="stats-grid">
+                            <section class="profile-stats-grid">
                                 <div class="stat"><div class="stat-label">⏱ Najlepszy czas</div><div class="stat-value">@($"{(SongStats?.BestTimeSec ?? 0):0.00} s")</div></div>
                                 <div class="stat"><div class="stat-label">⏳ Średni czas</div><div class="stat-value">@($"{(SongStats?.AvgTimeSec ?? 0):0.00} s")</div></div>
                                 <div class="stat"><div class="stat-label">🏆 Pozycja</div><div class="stat-value">#@SongStats?.RankingPosition</div></div>
@@ -96,7 +96,7 @@
                         }
                         else if (ActiveTab == "movies")
                         {
-                            <section class="stats-grid">
+                            <section class="profile-stats-grid">
                                 <div class="stat"><div class="stat-label">⏱ Najlepszy czas</div><div class="stat-value">@($"{(MovieStats?.BestTimeSec ?? 0):0.00} s")</div></div>
                                 <div class="stat"><div class="stat-label">⏳ Średni czas</div><div class="stat-value">@($"{(MovieStats?.AvgTimeSec ?? 0):0.00} s")</div></div>
                                 <div class="stat"><div class="stat-label">🏆 Pozycja</div><div class="stat-value">#@MovieStats?.RankingPosition</div></div>

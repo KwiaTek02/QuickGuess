@@ -21,14 +21,43 @@
 
         <div class="input-wrapper">
             <i class="bi bi-lock-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Password" placeholder="Hasło" type="password" />
+
+            <input class="input-field"
+                   @bind="Password"
+                   @bind:event="oninput"
+                   placeholder="Hasło"
+                   type="@(ShowPw ? "text" : "password")"
+                   disabled="@IsLoading" />
+
+            <button class="icon-btn"
+                    type="button"
+                    @onclick="TogglePw"
+                    title="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")"
+                    aria-label="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")">
+                <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
         </div>
+        
+
 
         <div class="auth-links left-align">
             <a href="/forgot-password">Zapomniałeś hasła?</a>
         </div>
+        
+        <button @onclick="LoginUser" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
+            @if (IsLoading)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+                <span>Logowanie...</span>
+            }
+            else
+            {
+                <span>Zaloguj się</span>
+            }
+        </button>
+        
 
-        <button @onclick="LoginUser" class="btn login-btn">Zaloguj się</button>
+        @*<button @onclick="LoginUser" class="btn login-btn">Zaloguj się</button>*@
 
         <div class="google-btn-wrapper" style="margin-top: 0.75rem;">
             
@@ -43,9 +72,14 @@
 </div>
 
 @code {
+    bool ShowPw;
+
+    void TogglePw() => ShowPw = !ShowPw;
     string Email = "";
     string Password = "";
     string Error = "";
+    bool IsLoading = false;
+    bool ShowRepeat;
 
     private const string GoogleClientId = "628190551033-vgs07tcj28liadrpe05ajpfh7u083qga.apps.googleusercontent.com";
 
@@ -79,14 +113,26 @@
 
     private async Task LoginUser()
     {
-        var success = await AuthService.Login(Email, Password);
-        if (!success)
+        if (IsLoading) return;
+        Error = "";
+        IsLoading = true;
+        await InvokeAsync(StateHasChanged); // odśwież UI przed wywołaniem serwisu
+
+        try
         {
-            Error = "Niepoprawne dane logowania lub email niezweryfikowany.";
+            var success = await AuthService.Login(Email, Password);
+            if (!success)
+            {
+                Error = "Niepoprawne dane logowania lub email niezweryfikowany.";
+            }
+            else
+            {
+                Navigation.NavigateTo("/panel");
+            }
         }
-        else
+        finally
         {
-            Navigation.NavigateTo("/panel");
+            IsLoading = false;
         }
     }
 
@@ -94,5 +140,7 @@
     {
         _dotNetRef?.Dispose();
     }
+
+   
 
 }

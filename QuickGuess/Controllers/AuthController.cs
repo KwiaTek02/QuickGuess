@@ -316,7 +316,7 @@ namespace QuickGuess.Controllers
             string subject = $"{_brandName} — Potwierdź adres e-mail";
             string preheader = "Kliknij, aby aktywować konto i zacząć grać w QuickGuess.";
             string title = "Witaj w QuickGuess!";
-            string intro = "Dziękujemy za rejestrację. Potwierdź swój adres e-mail, aby odblokować konto.";
+            string intro = "Dziękujemy za rejestrację. Potwierdź swój adres e-mail, aby utworzyć konto.";
             string button = "Potwierdź e-mail";
 
             await SendBrandedEmail(
