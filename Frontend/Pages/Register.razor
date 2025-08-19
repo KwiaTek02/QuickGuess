@@ -1,5 +1,6 @@
 ﻿@page "/register"
 @using Frontend.Services
+@using System.Linq
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
 
@@ -14,25 +15,77 @@
 
         <div class="input-wrapper">
             <i class="bi bi-person-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Username" placeholder="Nazwa użytkownika" />
+            <InputText class="input-field" @bind-Value="Username" placeholder="Nazwa użytkownika" disabled="@IsLoading" />
         </div>
 
         <div class="input-wrapper">
             <i class="bi bi-envelope-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Email" placeholder="Email" />
+            <InputText class="input-field" @bind-Value="Email" placeholder="Email" disabled="@IsLoading" />
+        </div>
+
+        <div class="input-wrapper has-popover">
+            <i class="bi bi-lock-fill input-icon"></i>
+
+            <input class="input-field"
+                   @bind="Password"
+                   @bind:event="oninput"
+                   placeholder="Hasło"
+                   type="@(ShowPw ? "text" : "password")"
+                   disabled="@IsLoading"
+                   @onfocus="() => PwFocused = true"
+                   @onblur="() => PwFocused = false" />
+
+            <button class="icon-btn" type="button" @onclick="() => ShowPw = !ShowPw" title="Pokaż/ukryj">
+                <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
+
+            @* Dymek z wymaganiami *@
+            @if (PwFocused || !string.IsNullOrEmpty(Password))
+            {
+                <div class="pw-popover" role="dialog" aria-label="Wymagania hasła">
+                    <div class="pw-popover__arrow"></div>
+                    <ul class="pw-rules in-popover">
+                        <li class="@(Password?.Length >= 8 ? "ok" : null)">min. 8 znaków</li>
+                        <li class="@(HasUpper ? "ok" : null)">wielka litera</li>
+                        <li class="@(HasLower ? "ok" : null)">mała litera</li>
+                        <li class="@(HasDigit ? "ok" : null)">cyfra</li>
+                        <li class="@(HasSpecial ? "ok" : null)">znak specjalny</li>
+                    </ul>
+                </div>
+            }
+        </div>
+        
+        <div class="pw-meter" aria-hidden="true">
+            <div class="pw-meter__fill" style="width:@StrengthPct%"></div>
+            <div class="pw-meter__label">Siła hasła: @StrengthLabel</div>
         </div>
 
         <div class="input-wrapper">
             <i class="bi bi-lock-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Password" type="password" placeholder="Hasło" />
+
+            <input class="input-field"
+                   @bind="RepeatPassword"
+                   @bind:event="oninput"
+                   placeholder="Powtórz hasło"
+                   type="@(ShowRepeat ? "text" : "password")"
+                   disabled="@IsLoading" />
+
+            <button class="icon-btn" type="button" @onclick="() => ShowRepeat = !ShowRepeat" title="Pokaż/ukryj">
+                <i class="bi @(ShowRepeat ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
         </div>
 
-        <div class="input-wrapper">
-            <i class="bi bi-lock-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="RepeatPassword" type="password" placeholder="Powtórz hasło" />
-        </div>
-
-        <button @onclick="RegisterUser" class="btn login-btn">Zarejestruj się</button>
+        <button @onclick="RegisterUser" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
+            @if (IsLoading)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+                <span>Rejestrowanie...</span>
+            }
+            else
+            {
+                <span>Zarejestruj się</span>
+            }
+        </button>
 
         <div class="auth-links center-row">
             <span>Masz już konto?</span>
@@ -47,23 +100,66 @@
     string Password = "";
     string RepeatPassword = "";
     string Error = "";
+    bool IsLoading = false;
+    bool PwFocused;
+    bool ShowPw;
+    bool ShowRepeat;
+
+    
+    int StrengthPct => CalculateStrengthPct(Password);
+    string StrengthLabel => StrengthPct < 40 ? "Słabe" : StrengthPct < 70 ? "Średnie" : "Silne";
+
+    bool HasUpper   => !string.IsNullOrEmpty(Password) && Password.Any(char.IsUpper);
+    bool HasLower   => !string.IsNullOrEmpty(Password) && Password.Any(char.IsLower);
+    bool HasDigit   => !string.IsNullOrEmpty(Password) && Password.Any(char.IsDigit);
+    bool HasSpecial => !string.IsNullOrEmpty(Password) && Password.Any(ch => !char.IsLetterOrDigit(ch));
 
     private async Task RegisterUser()
     {
+        if (IsLoading) return;
+
+        Error = "";
+
         if (Password != RepeatPassword)
         {
             Error = "Hasła nie są takie same.";
             return;
         }
 
-        var success = await AuthService.Register(Username, Email, Password);
-        if (!success)
+        IsLoading = true;
+        await InvokeAsync(StateHasChanged); // pokaż spinner natychmiast
+
+        try
         {
-            Error = "Nie udało się zarejestrować. Sprawdź dane.";
+            var success = await AuthService.Register(Username, Email, Password);
+            if (!success)
+            {
+                Error = "Nie udało się zarejestrować. Sprawdź dane.";
+            }
+            else
+            {
+                Navigation.NavigateTo("/");
+            }
         }
-        else
+        finally
         {
-            Navigation.NavigateTo("/");
+            IsLoading = false;
         }
+    }
+
+    int CalculateStrengthPct(string? p)
+    {
+        if (string.IsNullOrEmpty(p)) return 0;
+
+        int score = 0;
+        if (p.Length >= 8)  score++;
+        if (p.Length >= 12) score++;             // bonus za długość
+        if (p.Any(char.IsUpper)) score++;
+        if (p.Any(char.IsLower)) score++;
+        if (p.Any(char.IsDigit)) score++;
+        if (p.Any(ch => !char.IsLetterOrDigit(ch))) score++;
+
+        // skala 0..6 -> 0..100
+        return (int)Math.Round(score / 6.0 * 100);
     }
 }

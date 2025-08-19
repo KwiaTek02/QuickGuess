@@ -2051,18 +2051,48 @@ input:disabled {
 .pw-rules {
     list-style: none;
     padding: 0;
-    margin: .35rem 0 1rem;
+    margin: .45rem 0 1rem;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0,1fr));
-    gap: .25rem .75rem;
-    font-size: .9rem;
-    color: #6b7280;
+    grid-template-columns: 1fr 1fr; /* 2 kolumny */
+    gap: .35rem 1rem; /* odstêpy: wiersz / kolumna */
+    font-size: .92rem;
+    color: #64748b; /* szaroœæ bazowa */
+    align-items: center;
 }
+    .pw-rules li {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        justify-self: start;
+        transition: color .2s ease;
+    }
+        .pw-rules li:first-child {
+            grid-column: 1 / -1;
+            justify-self: center;
+            font-weight: 600;
+        }
+
+        /* kropka przed tekstem */
+        .pw-rules li::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            background: #cbd5e1; /* szara gdy niespe³nione */
+            box-shadow: 0 0 0 2px #e5e7eb inset;
+            flex: 0 0 8px;
+            transform: translateY(1px);
+            transition: background-color .2s ease, box-shadow .2s ease;
+        }
 
     .pw-rules li.ok {
         color: #16a34a;
         font-weight: 600;
     }
+        .pw-rules li.ok::before {
+            background: #16a34a;
+            box-shadow: 0 0 0 2px rgba(22,163,74,.15) inset, 0 0 10px rgba(22,163,74,.35);
+        }
 
 .login-card .input-wrapper .icon-btn {
     width: auto !important;
@@ -3672,3 +3702,148 @@ input:disabled {
 }
 
 /* (porz¹dek) stare klasy z Home mog¹ zostaæ, ale nie s¹ ju¿ u¿ywane */
+
+.home-hero__title,
+.home-hero__title:focus,
+.home-hero__title:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Stan ³adowania przycisku logowania */
+.login-btn[disabled] {
+    opacity: .8;
+    cursor: progress;
+}
+
+.btn-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: .5rem;
+    border: 2px solid rgba(255,255,255,.6);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: btn-spin .6s linear infinite;
+    vertical-align: -2px;
+}
+
+@keyframes btn-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* karta mo¿e „wystawiaæ” elementy poza siebie */
+.login-card.enhanced {
+    position: relative;
+    overflow: visible;
+}
+
+/* kotwica do absolutnego pozycjonowania dymka */
+.input-wrapper.has-popover {
+    position: relative;
+}
+
+/* p³ywaj¹cy dymek z wymaganiami */
+.pw-popover {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 16px); /* na prawo od inputa */
+    transform: translateY(-50%);
+    width: 260px;
+    padding: .85rem 1rem;
+    border-radius: 12px;
+    background: rgba(15,23,42,.92);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+    z-index: 200; /* ponad kart¹ */
+}
+
+/* „strza³ka” dymka */
+.pw-popover__arrow {
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: rgba(15,23,42,.92);
+    border-left: 1px solid rgba(255,255,255,.14);
+    border-bottom: 1px solid rgba(255,255,255,.14);
+}
+
+/* ta sama lista regu³, ale w dymku w uk³adzie pionowym */
+.pw-rules.in-popover {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .45rem;
+    font-size: .92rem;
+}
+
+    .pw-rules.in-popover li:first-child {
+        grid-column: auto;
+        justify-self: start;
+        font-weight: 600;
+    }
+
+/* Fallback – na wê¿szych ekranach poka¿ dymek pod inputem,
+   ¿eby nie wychodzi³ poza viewport */
+@media (max-width: 980px) {
+    .pw-popover {
+        left: 0;
+        top: calc(100% + 10px);
+        transform: none;
+        width: min(320px, 92vw);
+    }
+
+    .pw-popover__arrow {
+        left: 20px;
+        top: -6px;
+        transform: rotate(45deg);
+        border-left: 1px solid rgba(255,255,255,.14);
+        border-bottom: none;
+        border-top: 1px solid rgba(255,255,255,.14);
+    }
+}
+
+/* Profile.razor.css — dzia³a tylko w tym komponencie dziêki CSS isolation */
+
+/* Grid dla kafelków w zak³adkach Piosenki/Filmy */
+.profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+}
+
+    /* Sam kafelek – dopasowany do 120px ³¹cznie z paddingiem/borderem */
+    .profile-stats-grid .stat {
+        width: auto; /* by³o: 120px */
+        box-sizing: border-box;
+        text-align: center;
+        padding: .9rem 1rem;
+    }
+
+    /* Etykieta i wartoœæ (lekko skompresowane) */
+    .profile-stats-grid .stat-label {
+        font-size: .8rem;
+        line-height: 1.2;
+        white-space: normal; /* pozwól zawijaæ d³u¿sze napisy */
+        overflow: hidden;
+    }
+
+    .profile-stats-grid .stat-value {
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+/* na w¹skich ekranach spadnij do jednej kolumny */
+@media (max-width: 560px) {
+    .profile-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
