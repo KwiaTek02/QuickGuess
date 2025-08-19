@@ -4,6 +4,8 @@
 @inject IJSRuntime JS
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
+@using System.Diagnostics;
+
 
 <div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
     <h1 class="game-title">🎬 Jaki To Film?</h1>
@@ -26,6 +28,14 @@
                 <kbd>Enter</kbd>
             </button>
         </section>
+    }
+    else if (IsRoundLoading || CurrentMovie is null)
+    {
+        <div class="preloader" aria-busy="true" aria-live="polite">
+            <i class="fas fa-film fa-spin" aria-hidden="true"></i>
+            <p>Ładuję rundę…</p>
+            <small>Losuję film i przygotowuję timer.</small>
+        </div>
     }
     else if (CurrentMovie != null)
     {
@@ -55,53 +65,69 @@
             @if (Answered)
             {
                 <div class="result-modal" role="dialog" aria-modal="true">
-                    <div class="result-header @(LastGuessCorrect ? "win" : "lose")">
+                    <div class="result-header @(IsResultLoading ? "loading" : (LastGuessCorrect ? "win" : "lose"))">
                         <h3 class="result-title">
-                            @((LastGuessCorrect) ? "🎉Udało ci się!🎉" : "❌Niestety nie tym razem!❌")
+                            @(IsResultLoading ? "⏳ Liczenie wyniku…" : (LastGuessCorrect ? "🎉Udało ci się!🎉" : "❌Niestety nie tym razem!❌"))
                         </h3>
-                        <p class="result-subtitle">@ResultMessage</p>
+                        <p class="result-subtitle">
+                            @(IsResultLoading ? "Przeliczam punkty i pozycję w rankingu…" : ResultMessage)
+                        </p>
                     </div>
+                    
+                    @if (IsResultLoading)
+                    {
+                        <div class="result-loading">
+                            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                            <span>Proszę czekać…</span>
+                        </div>
+                    }
+                    else
+                    {
 
-                    <div class="result-body">
-                        <div class="stats-grid">
-                            <div class="stat">
-                                <div class="stat-label">⏱ Czas odpowiedzi</div>
-                                <div class="stat-value">@LastAnswerDuration s</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">🏅 Punkty za rundę</div>
-                                <div class="stat-value">@LastRoundPoints</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">🏆 Pozycja w rankingu</div>
-                                <div class="stat-value">#@PlayerStats?.RankingPosition</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">📈 % wygranych</div>
-                                <div class="stat-value">@($"{PlayerStats?.WinRate:P0}")</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">🎮 Gier (ranking)</div>
-                                <div class="stat-value">@PlayerStats?.Games</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">✔️ Trafionych</div>
-                                <div class="stat-value">@PlayerStats?.Correct</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">❌ Nietrafionych</div>
-                                <div class="stat-value">@PlayerStats?.Incorrect</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">⚡ Najszybsza odpowiedź</div>
-                                <div class="stat-value">@((PlayerStats?.BestTimeSec ?? 0)) s</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">⏳ Średni czas</div>
-                                <div class="stat-value">@($"{(PlayerStats?.AvgTimeSec ?? 0):0.0} s")</div>
+                        <div class="result-body">
+                            <div class="stats-grid">
+                                <div class="stat">
+                                    <div class="stat-label">⏱ Czas odpowiedzi</div>
+                                    <div class="stat-value">@($"{LastAnswerDurationSec:0.00} s")</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">🏅 Punkty za rundę</div>
+                                    <div class="stat-value">@LastRoundPoints</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">🏆 Pozycja w rankingu</div>
+                                    <div class="stat-value rank">
+                                        <span class="rank-num">#@PlayerStats?.RankingPosition</span>
+                                        <i class="@RankIconClass" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">📈 % wygranych</div>
+                                    <div class="stat-value">@($"{PlayerStats?.WinRate:P0}")</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">🎮 Gier (ranking)</div>
+                                    <div class="stat-value">@PlayerStats?.Games</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">✔️ Trafionych</div>
+                                    <div class="stat-value">@PlayerStats?.Correct</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">❌ Nietrafionych</div>
+                                    <div class="stat-value">@PlayerStats?.Incorrect</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">⚡ Najszybsza odpowiedź</div>
+                                    <div class="stat-value">@($"{(PlayerStats?.BestTimeSec ?? 0):0.00} s")</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">⏳ Średni czas</div>
+                                    <div class="stat-value">@($"{(PlayerStats?.AvgTimeSec ?? 0):0.00} s")</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
 
                     <div class="result-actions">
                         <button class="btn-modal neutral" @onclick='() => Navigation.NavigateTo("/panel")'>
@@ -121,8 +147,8 @@
 
             @* === NOWY TYPEAHEAD jak w piosenkach === *@
             <div class="film-input-wrapper-guess" id="guess-wrapper">
-                <div class="typeahead">
-                    <input class="guess-input typeahead__input"
+                <div class="typeahead film-typeahead">
+                    <input class="film-guess-input typeahead__input"
                            placeholder="🎬 Zgadnij tytuł…"
                            value="@Guess"
                            @oninput="OnInput"
@@ -187,6 +213,10 @@
 </div>
 
 @code {
+    
+    private readonly Stopwatch _sw = new();
+    private double LastAnswerDurationSec; 
+
     // === DTOs ===
     protected class MovieDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
     protected class GuessResult
@@ -205,10 +235,13 @@
         public int Incorrect { get; set; }
         public double WinRate { get; set; }
         public int RankingPosition { get; set; }
-        public int BestTimeSec { get; set; }
+        public double BestTimeSec { get; set; }
         public double AvgTimeSec { get; set; }
         public int TotalScore { get; set; }
     }
+
+    private bool IsResultLoading = false;
+    private bool IsRoundLoading = false;
 
     // === State ===
     protected MovieDto? CurrentMovie;
@@ -234,6 +267,15 @@
     private int LastAnswerDuration;
     private int LastRoundPoints;
     private PlayerMovieStats? PlayerStats;
+
+    private int? PreRoundRank;              // pozycja PRZED rundą
+    private string RankTrend = "same";      // "up" | "down" | "same"
+    private string RankIconClass => RankTrend switch
+    {
+        "up"   => "fas fa-arrow-up rank-up",
+        "down" => "fas fa-arrow-down rank-down",
+        _      => "fas fa-minus rank-same"
+    };
 
     // === Helpers ===
     private async void StartCountdown()
@@ -306,41 +348,76 @@
     {
         GameSessionId = Guid.NewGuid();
         Started = true;
+
+        // reset stanu rundy
         Answered = false;
+        IsResultLoading = false;
+        IsRoundLoading = true;     // ⇦ pokaż spinner dla rundy
         ResultMessage = "";
         Guess = "";
         PlayerStats = null;
         LastGuessCorrect = false;
         LastAnswerDuration = 0;
         LastRoundPoints = 0;
+        RankTrend = "same";
 
-        var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
-        if (movies?.Count > 0)
+        // zapamiętaj pozycję sprzed rundy (bez zmian)
+        try
         {
-            CurrentMovie = movies[0];
-            ImageUrl = $"https://localhost:7236/api/media/movie-image/{CurrentMovie.Id}";
-            StateHasChanged();
-            await Task.Delay(50);
-            StartTime = DateTime.Now;
-            StartCountdown();
+            var clientForPre = await AuthHttp.GetClientAsync();
+            var pre = await clientForPre.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
+            PreRoundRank = (pre?.RankingPosition ?? 0) > 0 ? pre!.RankingPosition : (int?)null;
         }
+        catch { PreRoundRank = null; }
+
+        // pobierz film
+        var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
+        if (movies is null || movies.Count == 0)
+        {
+            IsRoundLoading = false;
+            ResultMessage = "Nie udało się wylosować filmu. Spróbuj ponownie.";
+            StateHasChanged();
+            return;
+        }
+
+        CurrentMovie = movies[0];
+        ImageUrl = $"https://localhost:7236/api/media/movie-image/{CurrentMovie.Id}";
+
+        // daj Blazorowi zrenderować <img> po zmianie src
+        StateHasChanged();
+        await Task.Delay(100);
+
+        // start pomiaru czasu i wizualnego timera
+        StartTime = DateTime.Now;
+        _sw.Reset();
+        _sw.Start();
+
+        IsRoundLoading = false; // ⇦ zdejmij spinner (UI z timerem i inputem pokaże się teraz)
+        StateHasChanged();
+
+        StartCountdown();
     }
+
 
     protected async Task SubmitGuess()
     {
         if (CurrentMovie == null || Answered) return;
 
-        Answered = true;                   // zablokuj od razu
+        Answered = true; 
+        IsResultLoading = true; // zablokuj od razu
         await JS.InvokeVoidAsync("Timer.stop");
 
-        var duration = (int)(DateTime.Now - StartTime).TotalSeconds;
+        _sw.Stop();
+        var durationMs = (int)_sw.ElapsedMilliseconds;   // zapisujemy w MS
+        LastAnswerDurationSec = durationMs / 1000.0;     
+        LastAnswerDuration = (int)Math.Round(LastAnswerDurationSec);
 
         var request = new
         {
             itemId = CurrentMovie.Id,
             guessText = CleanGuess(Guess),
             mode = "ranking",
-            duration = duration
+            duration = durationMs
         };
 
         var client = await AuthHttp.GetClientAsync();
@@ -349,12 +426,12 @@
         if (!res.IsSuccessStatusCode)
         {
             ResultMessage = "❌ Błąd serwera lub brak autoryzacji.";
+            IsResultLoading = false;
             return;
         }
 
         var result = await res.Content.ReadFromJsonAsync<GuessResult>();
 
-        LastAnswerDuration = duration;
         LastGuessCorrect = result!.Correct;
         LastRoundPoints = result.Score;
 
@@ -365,21 +442,74 @@
         try
         {
             PlayerStats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
+            UpdateRankTrend(); // ⇦ ustal strzałkę
         }
-        catch { /* opcjonalnie log */ }
+        catch 
+        {  
+            // log
+        }
+
+        IsResultLoading = false;   
+        StateHasChanged();
     }
+
 
     [JSInvokable]
     public async Task TimeoutGuess(Guid sessionId)
     {
-        if (sessionId != GameSessionId || Answered || !Started)
+        if (sessionId != GameSessionId || Answered || !Started || CurrentMovie is null)
             return;
 
+        _sw.Stop();
         Answered = true;
-        ResultMessage = "⏱ Czas minął!";
+        IsResultLoading = true;
+
         await JS.InvokeVoidAsync("Timer.stop");
+
+        // pokaż w oknie 20.00 s
+        LastAnswerDurationSec = 20.0;
+        LastAnswerDuration = 20;
+
+        var client = await AuthHttp.GetClientAsync();
+        var request = new
+        {
+            itemId = CurrentMovie.Id,
+            guessText = "",          // puste = niepoprawne
+            mode = "ranking",
+            duration = 20000
+        };
+
+        try
+        {
+            var res = await client.PostAsJsonAsync("/api/guess/movie", request);
+            if (res.IsSuccessStatusCode)
+            {
+                var result = await res.Content.ReadFromJsonAsync<GuessResult>();
+                LastGuessCorrect = result!.Correct;     // false
+                LastRoundPoints = result.Score;         // -50
+                ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
+
+                PlayerStats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
+                UpdateRankTrend(); // ⇦ ustal strzałkę
+            }
+            else
+            {
+                ResultMessage = "⏱ Czas minął!";
+                LastGuessCorrect = false;
+                LastRoundPoints = -50;
+            }
+        }
+        catch
+        {
+            ResultMessage = "⏱ Czas minął!";
+            LastGuessCorrect = false;
+            LastRoundPoints = -50;
+        }
+
+        IsResultLoading = false;
         StateHasChanged();
     }
+
 
     private string CleanGuess(string input)
     {
@@ -449,5 +579,19 @@
         var after = System.Net.WebUtility.HtmlEncode(text[(idx + query.Length)..]);
 
         return $"{before}<mark>{match}</mark>{after}";
+    }
+
+    private void UpdateRankTrend()
+    {
+        if (PreRoundRank.HasValue && PlayerStats is not null && PlayerStats.RankingPosition > 0)
+        {
+            if (PlayerStats.RankingPosition < PreRoundRank.Value) RankTrend = "up";
+            else if (PlayerStats.RankingPosition > PreRoundRank.Value) RankTrend = "down";
+            else RankTrend = "same";
+        }
+        else
+        {
+            RankTrend = "same";
+        }
     }
 }

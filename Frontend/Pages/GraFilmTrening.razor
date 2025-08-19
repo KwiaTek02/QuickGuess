@@ -1,4 +1,5 @@
 ﻿@page "/gra-film-trening"
+@using System.Diagnostics
 @using Frontend.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -27,7 +28,16 @@
             </button>
         </section>
     }
-    else if (CurrentMovie != null)
+    else if (IsRoundLoading || CurrentMovie is null)
+    {
+        <!-- PRELOADER RUNDY -->
+        <div class="preloader" aria-busy="true" aria-live="polite">
+            <i class="fas fa-film fa-spin" aria-hidden="true"></i>
+            <p>Ładuję rundę…</p>
+            <small>Losuję film i przygotowuję timer.</small>
+        </div>
+    }
+    else
     {
         <div class="flex flex-col items-center gap-6 w-full max-w-3xl mt-6">
 
@@ -51,16 +61,26 @@
                 </div>
             }
 
-            @* === OKNO WYNIKU (bez statystyk – trening) === *@
+            @* === OKNO WYNIKU (z loaderem) === *@
             @if (Answered)
             {
                 <div class="result-modal" role="dialog" aria-modal="true">
-                    <div class="result-header @(LastGuessCorrect ? "win" : "lose")">
+                    <div class="result-header @(IsResultLoading ? "loading" : (LastGuessCorrect ? "win" : "lose"))">
                         <h3 class="result-title">
-                            @((LastGuessCorrect) ? "🎉Dobrze!" : "❌Spróbuj ponownie!")
+                            @(IsResultLoading ? "⏳ Liczenie wyniku…" : (LastGuessCorrect ? "🎉Dobrze!" : "❌Spróbuj ponownie!"))
                         </h3>
-                        <p class="result-subtitle">@ResultMessage</p>
+                        <p class="result-subtitle">
+                            @(IsResultLoading ? "Przeliczam odpowiedź…" : ResultMessage)
+                        </p>
                     </div>
+
+                    @if (IsResultLoading)
+                    {
+                        <div class="result-loading">
+                            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                            <span>Proszę czekać…</span>
+                        </div>
+                    }
 
                     <div class="result-actions">
                         <button class="btn-modal neutral" @onclick='() => Navigation.NavigateTo("/panel")'>
@@ -78,10 +98,10 @@
                 </div>
             }
 
-            @* === NOWY TYPEAHEAD jak w rankingu piosenek === *@
+            @* === TYPEAHEAD === *@
             <div class="film-input-wrapper-guess" id="guess-wrapper">
-                <div class="typeahead">
-                    <input class="guess-input typeahead__input"
+                <div class="typeahead film-typeahead">
+                    <input class="film-guess-input typeahead__input"
                            placeholder="🎬 Zgadnij tytuł…"
                            value="@Guess"
                            @oninput="OnInput"
@@ -146,7 +166,6 @@
 </div>
 
 @code {
-    // === DTOs ===
     protected class MovieDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
     protected class GuessResult
     {
@@ -156,7 +175,13 @@
         public string? DisplayTitle { get; set; }
     }
 
-    // === State ===
+    // === Nowe flagi ===
+    private bool IsRoundLoading = false;  // loader przed startem rundy
+    private bool IsResultLoading = false; // loader w oknie wyniku
+
+    private readonly Stopwatch _sw = new();
+    private double LastAnswerDurationSec;
+
     protected MovieDto? CurrentMovie;
     protected string ImageUrl = "";
     protected string Guess = string.Empty;
@@ -164,35 +189,26 @@
     protected bool Answered = false;
     protected string ResultMessage = "";
     protected DateTime StartTime;
+
     private List<string> TitleSuggestions = new();
 
-    // Typeahead state
     private bool OpenSuggestions = false;
     private bool SuggestionsLoading = false;
     private int ActiveIndex = -1;
     private CancellationTokenSource? _sugCts;
 
     private Guid GameSessionId = Guid.NewGuid();
-    private int Countdown = 20; // tylko dla JS timera (UI)
+    private int Countdown = 20;
     private bool LastGuessCorrect;
 
-    // === Timer (wspólny z innymi ekranami) ===
     private async void StartCountdown()
     {
         Countdown = 20;
         StartTime = DateTime.Now;
-
-        try
-        {
-            await JS.InvokeVoidAsync("Timer.start", DotNetObjectReference.Create(this), GameSessionId, 20);
-        }
-        catch (JSException ex)
-        {
-            Console.WriteLine($"JS Error: {ex.Message}");
-        }
+        try { await JS.InvokeVoidAsync("Timer.start", DotNetObjectReference.Create(this), GameSessionId, 20); }
+        catch (JSException ex) { Console.WriteLine($"JS Error: {ex.Message}"); }
     }
 
-    // === Autocomplete (debounce + skeletony) ===
     private async Task OnInput(ChangeEventArgs e)
     {
         Guess = e.Value?.ToString() ?? string.Empty;
@@ -244,7 +260,6 @@
         CloseSuggestions();
     }
 
-    // === Flow ===
     protected async Task StartGame()
     {
         GameSessionId = Guid.NewGuid();
@@ -255,6 +270,8 @@
         LastGuessCorrect = false;
         TitleSuggestions.Clear();
 
+        IsRoundLoading = true;  // ⇦ pokaż loader rundy
+
         var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
         if (movies?.Count > 0)
         {
@@ -264,25 +281,33 @@
             await Task.Delay(50);
 
             StartTime = DateTime.Now;
+            _sw.Reset();
+            _sw.Start();
             StartCountdown();
         }
+
+        IsRoundLoading = false; // ⇦ zdejmij loader
+        StateHasChanged();
     }
 
     protected async Task SubmitGuess()
     {
         if (CurrentMovie == null || Answered) return;
 
-        Answered = true;                 // zablokuj UI
+        Answered = true;
+        IsResultLoading = true; // ⇦ pokaż loader w modalu
         await JS.InvokeVoidAsync("Timer.stop");
 
-        var duration = (int)(DateTime.Now - StartTime).TotalSeconds;
+        _sw.Stop();
+        var durationMs = (int)_sw.ElapsedMilliseconds;
+        LastAnswerDurationSec = durationMs / 1000.0;
 
         var request = new
         {
             itemId = CurrentMovie.Id,
             guessText = CleanGuess(Guess),
             mode = "training",
-            duration = duration
+            duration = durationMs
         };
 
         var client = await AuthHttp.GetClientAsync();
@@ -291,14 +316,17 @@
         if (!res.IsSuccessStatusCode)
         {
             ResultMessage = "❌ Błąd serwera lub brak autoryzacji.";
+            IsResultLoading = false;
             return;
         }
 
         var result = await res.Content.ReadFromJsonAsync<GuessResult>();
-        LastGuessCorrect = result!.Correct;
 
-        // W treningu po prostu pokazujemy poprawny tytuł (jak w piosenkach)
+        LastGuessCorrect = result!.Correct;
         ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
+
+        IsResultLoading = false; // ⇦ ukryj loader
+        StateHasChanged();
     }
 
     [JSInvokable]
@@ -307,13 +335,13 @@
         if (sessionId != GameSessionId || Answered || !Started)
             return;
 
+        _sw.Stop();
         Answered = true;
         ResultMessage = "⏱ Czas minął!";
         await JS.InvokeVoidAsync("Timer.stop");
         StateHasChanged();
     }
 
-    // === Utils ===
     private string CleanGuess(string input)
     {
         var match = System.Text.RegularExpressions.Regex.Match(input, @"^(.*?)(?: \(\d{4}\))?$");
@@ -334,28 +362,15 @@
         switch (e.Key)
         {
             case "ArrowDown":
-                if (TitleSuggestions.Count > 0)
-                {
-                    OpenSuggestions = true;
-                    ActiveIndex = (ActiveIndex + 1) % TitleSuggestions.Count;
-                }
+                if (TitleSuggestions.Count > 0) { OpenSuggestions = true; ActiveIndex = (ActiveIndex + 1) % TitleSuggestions.Count; }
                 break;
-
             case "ArrowUp":
-                if (TitleSuggestions.Count > 0)
-                {
-                    OpenSuggestions = true;
-                    ActiveIndex = (ActiveIndex <= 0 ? TitleSuggestions.Count - 1 : ActiveIndex - 1);
-                }
+                if (TitleSuggestions.Count > 0) { OpenSuggestions = true; ActiveIndex = (ActiveIndex <= 0 ? TitleSuggestions.Count - 1 : ActiveIndex - 1); }
                 break;
-
             case "Enter":
-                if (OpenSuggestions && ActiveIndex >= 0 && ActiveIndex < TitleSuggestions.Count)
-                    SelectSuggestion(TitleSuggestions[ActiveIndex]);
-                else
-                    await SubmitGuess();
+                if (OpenSuggestions && ActiveIndex >= 0 && ActiveIndex < TitleSuggestions.Count) SelectSuggestion(TitleSuggestions[ActiveIndex]);
+                else await SubmitGuess();
                 break;
-
             case "Escape":
                 CloseSuggestions();
                 break;
