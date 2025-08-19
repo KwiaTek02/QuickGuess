@@ -1,4 +1,5 @@
 ﻿@page "/gra-piosenka-trening"
+@using System.Diagnostics
 @using Frontend.Services
 @using Frontend.Shared
 @inject NavigationManager Navigation
@@ -24,11 +25,20 @@
                 <span class="btn-hero__glow"></span>
                 <i class="fas fa-play"></i>
                 <span>Start</span>
-                <kbd>Enter</kbd>
+                @*<kbd>Enter</kbd>*@
             </button>
         </section>
     }
-    else if (CurrentSong != null)
+    else if (IsRoundLoading || CurrentSong is null)
+    {
+        <!-- PRELOADER RUNDY -->
+        <div class="preloader" aria-busy="true" aria-live="polite">
+            <i class="fas fa-music fa-spin" aria-hidden="true"></i>
+            <p>Ładuję rundę…</p>
+            <small>Losuję utwór i przygotowuję timer.</small>
+        </div>
+    }
+    else
     {
         <div class="flex flex-col items-center gap-6 w-full max-w-3xl mt-6">
 
@@ -72,16 +82,26 @@
                 </div>
             }
 
-            @* === OKNO WYNIKU === *@
+            @* === OKNO WYNIKU (z loaderem) === *@
             @if (Answered)
             {
                 <div class="result-modal" role="dialog" aria-modal="true">
-                    <div class="result-header @(LastGuessCorrect ? "win" : "lose")">
+                    <div class="result-header @(IsResultLoading ? "loading" : (LastGuessCorrect ? "win" : "lose"))">
                         <h3 class="result-title">
-                            @((LastGuessCorrect) ? "🎉Dobrze!" : "❌Spróbuj ponownie!")
+                            @(IsResultLoading ? "⏳ Liczenie wyniku…" : (LastGuessCorrect ? "🎉Dobrze!" : "❌Spróbuj ponownie!"))
                         </h3>
-                        <p class="result-subtitle">@ResultMessage</p>
+                        <p class="result-subtitle">
+                            @(IsResultLoading ? "Przeliczam odpowiedź…" : ResultMessage)
+                        </p>
                     </div>
+
+                    @if (IsResultLoading)
+                    {
+                        <div class="result-loading">
+                            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+                            <span>Proszę czekać…</span>
+                        </div>
+                    }
 
                     <div class="result-actions">
                         <button class="btn-modal neutral" @onclick='() => Navigation.NavigateTo("/panel")'>
@@ -99,7 +119,7 @@
                 </div>
             }
 
-            @* === NOWY TYPEAHEAD jak w rankingu === *@
+            @* === TYPEAHEAD === *@
             <div class="input-wrapper-guess" id="guess-wrapper">
                 <div class="typeahead">
                     <input class="guess-input typeahead__input"
@@ -176,6 +196,10 @@
         public string? DisplayTitle { get; set; }
     }
 
+    // === Nowe flagi ===
+    private bool IsRoundLoading = false;  // loader przed startem rundy
+    private bool IsResultLoading = false; // loader w oknie wyniku
+
     protected SongDto? CurrentSong;
     protected string AudioUrl = "";
     protected ElementReference AudioRef;
@@ -185,24 +209,24 @@
     protected string ResultMessage = "";
     protected DateTime StartTime;
 
+    private readonly Stopwatch _sw = new();
+    private double LastAnswerDurationSec;
+
     private List<string> TitleSuggestions = new();
 
-    // Typeahead state (jak w rankingu)
     private bool OpenSuggestions = false;
     private bool SuggestionsLoading = false;
     private int ActiveIndex = -1;
     private CancellationTokenSource? _sugCts;
 
-    // UX jak w trybie rankingowym
     private Guid GameSessionId = Guid.NewGuid();
     private bool AudioStarted = false;
     private int Countdown = 20;
     private System.Timers.Timer? countdownTimer;
 
-    // Głośność – identycznie jak w rankingu
     private double Volume = 0.8; // 0..1
     private bool Muted = false;
-    private int _volumeP = 80;    // 0..100
+    private int _volumeP = 80;
     private int VolumeP
     {
         get => _volumeP;
@@ -227,15 +251,8 @@
     {
         Countdown = 20;
         StartTime = DateTime.Now;
-
-        try
-        {
-            await JS.InvokeVoidAsync("Timer.start", DotNetObjectReference.Create(this), GameSessionId, 20);
-        }
-        catch (JSException ex)
-        {
-            Console.WriteLine($"JS Error: {ex.Message}");
-        }
+        try { await JS.InvokeVoidAsync("Timer.start", DotNetObjectReference.Create(this), GameSessionId, 20); }
+        catch (JSException ex) { Console.WriteLine($"JS Error: {ex.Message}"); }
     }
 
     private async Task OnInput(ChangeEventArgs e)
@@ -264,7 +281,7 @@
 
         try
         {
-            await Task.Delay(180, cts.Token); // krótki debounce
+            await Task.Delay(180, cts.Token);
             var url = $"/api/songs/titles?query={Uri.EscapeDataString(Guess)}";
             var resp = await Http.GetFromJsonAsync<List<string>>(url, cts.Token);
             TitleSuggestions = resp ?? new();
@@ -298,6 +315,8 @@
         Guess = "";
         LastGuessCorrect = false;
 
+        IsRoundLoading = true;   // ⇦ pokaż loader rundy
+
         var songs = await Http.GetFromJsonAsync<List<SongDto>>("/api/songs/random?count=1");
         if (songs?.Count > 0)
         {
@@ -309,8 +328,13 @@
             await Task.Delay(100);
 
             StartTime = DateTime.Now;
+            _sw.Reset();
+            _sw.Start();
             StartCountdown();
         }
+
+        IsRoundLoading = false;  // ⇦ zdejmij loader
+        StateHasChanged();
     }
 
     protected virtual async Task SubmitGuess()
@@ -318,17 +342,20 @@
         if (CurrentSong == null || Answered) return;
 
         Answered = true;
+        IsResultLoading = true; // ⇦ pokaż loader w modalu
         countdownTimer?.Stop();
         await JS.InvokeVoidAsync("Timer.stop");
 
-        var duration = (int)(DateTime.Now - StartTime).TotalSeconds;
+        _sw.Stop();
+        var durationMs = (int)_sw.ElapsedMilliseconds;
+        LastAnswerDurationSec = durationMs / 1000.0;
 
         var request = new
         {
             itemId = CurrentSong.Id,
             guessText = CleanGuess(Guess),
             mode = "training",
-            duration = duration
+            duration = durationMs
         };
 
         var client = await AuthHttp.GetClientAsync();
@@ -337,6 +364,7 @@
         if (!res.IsSuccessStatusCode)
         {
             ResultMessage = "❌ Błąd serwera lub brak autoryzacji.";
+            IsResultLoading = false;
             return;
         }
 
@@ -344,9 +372,10 @@
         await JS.InvokeVoidAsync("stopAudio", AudioRef);
 
         LastGuessCorrect = result!.Correct;
-        ResultMessage = result.Correct
-            ? $"{result.DisplayTitle ?? result.CorrectTitle}"
-            : $"{result.DisplayTitle ?? result.CorrectTitle}";
+        ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
+
+        IsResultLoading = false; // ⇦ ukryj loader
+        StateHasChanged();
     }
 
     [JSInvokable]
@@ -355,6 +384,7 @@
         if (sessionId != GameSessionId || Answered || !Started)
             return;
 
+        _sw.Stop();
         Answered = true;
         ResultMessage = "⏱ Czas minął!";
         await JS.InvokeVoidAsync("stopAudio", AudioRef);
@@ -366,10 +396,8 @@
         if (Started && CurrentSong != null && !Answered && AudioRef.Context != null && !AudioStarted)
         {
             AudioStarted = true;
-
             await Task.Delay(200);
             await JS.InvokeVoidAsync("playAudio", AudioRef);
-
             await JS.InvokeVoidAsync("startTimeout",
                 DotNetObjectReference.Create(this),
                 "invokeMethodAsync",
@@ -395,12 +423,9 @@
     private async Task ToggleMute()
     {
         Muted = !Muted;
-        if (Muted)
-            await JS.InvokeVoidAsync("muteAudio", AudioRef);
-        else
-            await JS.InvokeVoidAsync("unmuteAudio", AudioRef);
-        if (!Muted)
-            await JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
+        if (Muted) await JS.InvokeVoidAsync("muteAudio", AudioRef);
+        else await JS.InvokeVoidAsync("unmuteAudio", AudioRef);
+        if (!Muted) await JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)
@@ -410,28 +435,15 @@
         switch (e.Key)
         {
             case "ArrowDown":
-                if (TitleSuggestions.Count > 0)
-                {
-                    OpenSuggestions = true;
-                    ActiveIndex = (ActiveIndex + 1) % TitleSuggestions.Count;
-                }
+                if (TitleSuggestions.Count > 0) { OpenSuggestions = true; ActiveIndex = (ActiveIndex + 1) % TitleSuggestions.Count; }
                 break;
-
             case "ArrowUp":
-                if (TitleSuggestions.Count > 0)
-                {
-                    OpenSuggestions = true;
-                    ActiveIndex = (ActiveIndex <= 0 ? TitleSuggestions.Count - 1 : ActiveIndex - 1);
-                }
+                if (TitleSuggestions.Count > 0) { OpenSuggestions = true; ActiveIndex = (ActiveIndex <= 0 ? TitleSuggestions.Count - 1 : ActiveIndex - 1); }
                 break;
-
             case "Enter":
-                if (OpenSuggestions && ActiveIndex >= 0 && ActiveIndex < TitleSuggestions.Count)
-                    SelectSuggestion(TitleSuggestions[ActiveIndex]);
-                else
-                    await SubmitGuess();
+                if (OpenSuggestions && ActiveIndex >= 0 && ActiveIndex < TitleSuggestions.Count) SelectSuggestion(TitleSuggestions[ActiveIndex]);
+                else await SubmitGuess();
                 break;
-
             case "Escape":
                 CloseSuggestions();
                 break;
@@ -445,7 +457,6 @@
         SuggestionsLoading = false;
     }
 
-    // Podświetlanie trafienia
     private static string HighlightMatch(string text, string query)
     {
         if (string.IsNullOrWhiteSpace(text)) return System.Net.WebUtility.HtmlEncode(text);

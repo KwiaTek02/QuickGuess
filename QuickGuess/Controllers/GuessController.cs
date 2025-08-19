@@ -78,9 +78,13 @@ namespace QuickGuess.Controllers
                     _db.Leaderboards.Add(board);
                 }
 
-                board.ScoreTotal += score;
-                if (type == "song") board.ScoreSongs += score;
-                else board.ScoreMovies += score;
+                // ⛳ Łączny wynik nigdy poniżej 0
+                board.ScoreTotal = Math.Max(0, board.ScoreTotal + score);
+
+                if (type == "song")
+                    board.ScoreSongs = Math.Max(0, board.ScoreSongs + score);
+                else
+                    board.ScoreMovies = Math.Max(0, board.ScoreMovies + score);
             }
 
             await _db.SaveChangesAsync();

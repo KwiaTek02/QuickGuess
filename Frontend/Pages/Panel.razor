@@ -71,11 +71,11 @@
                         </div>
                         <div class="stat">
                             <div class="stat-label">⚡ Najszybsza odpowiedź</div>
-                            <div class="stat-value">@SongStats.BestTimeSec s</div>
+                            <div class="stat-value">@($"{SongStats.BestTimeSec:0.00} s")</div>
                         </div>
                         <div class="stat">
                             <div class="stat-label">⏳ Średni czas</div>
-                            <div class="stat-value">@($"{SongStats.AvgTimeSec:0.0} s")</div>
+                            <div class="stat-value">@($"{SongStats.AvgTimeSec:0.00} s")</div>
                         </div>
                         <div class="stat">
                             <div class="stat-label">💯 Łączny wynik</div>
@@ -124,11 +124,11 @@
                         </div>
                         <div class="stat">
                             <div class="stat-label">⚡ Najszybsza odpowiedź</div>
-                            <div class="stat-value">@MovieStats.BestTimeSec s</div>
+                            <div class="stat-value">@($"{MovieStats.BestTimeSec:0.00} s")</div>
                         </div>
                         <div class="stat">
                             <div class="stat-label">⏳ Średni czas</div>
-                            <div class="stat-value">@($"{MovieStats.AvgTimeSec:0.0} s")</div>
+                            <div class="stat-value">@($"{MovieStats.AvgTimeSec:0.00} s")</div>
                         </div>
                         <div class="stat">
                             <div class="stat-label">💯 Łączny wynik</div>
@@ -188,7 +188,7 @@
         public int Incorrect { get; set; }
         public double WinRate { get; set; }
         public int RankingPosition { get; set; }
-        public int BestTimeSec { get; set; }
+        public double BestTimeSec { get; set; }
         public double AvgTimeSec { get; set; }
         public int TotalScore { get; set; }
     }
@@ -200,7 +200,7 @@
         public int Incorrect { get; set; }
         public double WinRate { get; set; }
         public int RankingPosition { get; set; }
-        public int BestTimeSec { get; set; }
+        public double BestTimeSec { get; set; }
         public double AvgTimeSec { get; set; }
         public int TotalScore { get; set; }
     }

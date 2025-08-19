@@ -926,7 +926,6 @@ input:disabled {
         }
 
 .submit-btn {
-
     background-color: #10b981;
     color: white;
     font-size: 1.5rem;
@@ -936,6 +935,8 @@ input:disabled {
     font-weight: bold;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     transition: background 0.3s ease;
+
+
 }
 
 .submit-btn:hover {
@@ -1033,11 +1034,12 @@ input:disabled {
 }
 
 .film-image-preview {
-    max-width: 100%;
-    max-height: 500px;
+    display: block; /* <-- obraz jako blok */
+    margin: 0 auto 3rem; /* <-- auto po bokach = centrowanie */
+    max-width: min(92vw, 800px); /* rozs¹dny limit szerokoœci */
+    height: auto;
     border-radius: 1rem;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    margin-bottom: 3rem;
 }
 
 .film-input-wrapper-guess {
@@ -1072,6 +1074,8 @@ input:disabled {
     font-weight: bold;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     transition: background 0.3s ease;
+    display: block;
+    margin: 1.25rem auto 0;
 }
 
     .film-submit-btn:hover {
@@ -1883,6 +1887,7 @@ input:disabled {
 
 .btn-hero {
     position: relative;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     gap: .8rem;
@@ -1931,15 +1936,15 @@ input:disabled {
 .btn-hero::after {
     content: "";
     position: absolute;
-    left: -30%;
-    top: -220%;
-    width: 50%;
-    height: 500%;
-    transform: rotate(18deg);
-    background: linear-gradient(90deg, rgba(255,255,255,.0), rgba(255,255,255,.65), rgba(255,255,255,0));
+    top: -40%; /* by³o -220% */
+    left: -70%; /* by³o -30% */
+    width: 180%; /* by³o 50% */
+    height: 220%; /* by³o 500% */
+    transform: rotate(18deg) translateX(0);
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.55), rgba(255,255,255,0));
     mix-blend-mode: screen;
     pointer-events: none;
-    opacity: .0;
+    opacity: 0;
     transition: opacity .2s ease, transform .6s ease;
 }
 
@@ -1954,8 +1959,8 @@ input:disabled {
     }
 
     .btn-hero:hover::after {
-        opacity: .9;
-        transform: rotate(18deg) translateX(35%);
+        opacity: .6; 
+        transform: rotate(18deg) translateX(85%);
     }
 
 .btn-hero:active {
@@ -3220,9 +3225,6 @@ input:disabled {
     margin-inline: auto;
 }
 
-.typeahead__input {
-    width: 100%;
-}
 
 .typeahead__panel {
     position: absolute;
@@ -3353,3 +3355,320 @@ input:disabled {
     }
 }
 
+.stat-value.rank {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    justify-content: center;
+}
+
+.rank-up {
+    color: #22c55e;
+}
+/* zielony */
+.rank-down {
+    color: #ef4444;
+}
+/* czerwony */
+.rank-same {
+    color: #9ca3af;
+}
+/* szary */
+
+.result-header.loading {
+    background: linear-gradient(90deg,#0f172a,#0b1223);
+}
+
+.result-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    padding: 24px;
+    font-weight: 600;
+}
+
+.rank .fas {
+    margin-left: .4rem;
+}
+
+.rank-up {
+    color: #22c55e;
+}
+
+.rank-down {
+    color: #ef4444;
+}
+
+.rank-same {
+    color: #9ca3af;
+}
+/* pozioma kreska */
+
+.preloader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+    padding: 2rem 1.25rem;
+    border-radius: 16px;
+    background: rgba(15,23,42,.6);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+    .preloader i {
+        font-size: 2rem;
+    }
+
+    .preloader p {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .preloader small {
+        opacity: .8;
+    }
+
+/* --- Film: mniejszy input + centrowanie --- */
+.typeahead.film-typeahead {
+    width: 100%;
+    max-width: 560px; /* mniejszy ni¿ muzyczny */
+    margin-inline: auto; /* wyœrodkowanie */
+
+}
+
+/* sam input dla filmów */
+.film-guess-input {
+    width: 100%;
+    padding: .9rem 1.25rem;
+    font-size: 1.25rem;
+    border-radius: 9999px;
+    border: 3px solid #ef4444; /* czerwony akcent filmów */
+    outline: none;
+    background: #fff;
+    color: #111827;
+    text-align: center;
+    box-shadow: 0 0 0 3px rgba(239,68,68,.25);
+}
+
+    .film-guess-input:focus {
+        border-color: #dc2626;
+        box-shadow: 0 0 0 4px rgba(239,68,68,.18);
+    }
+
+/* panel podpowiedzi dopasowany do mniejszego inputa */
+.typeahead.film-typeahead .typeahead__panel {
+    width: min(560px, 92vw);
+}
+
+.input-wrapper-guess .typeahead {
+    text-align: center; /* rodzic centruje elementy inline/inline-block */
+}
+
+.input-wrapper-guess .submit-btn {
+    display: inline-block; /* zostaje inline  input nie zwê¿a siê */
+    margin-top: 1.25rem; /* sam odstêp u góry */
+}
+
+/* Piosenka – ciut mniejszy tekst w inpucie */
+.guess-input {
+    font-size: 1.45rem; /* by³o 1.75rem */
+    line-height: 1.2;
+}
+
+/* opcjonalnie na wê¿szych ekranach */
+@media (max-width: 640px) {
+    .guess-input {
+        font-size: 1.25rem;
+    }
+}
+/* Input piosenek – mniejszy + idealnie na œrodku */
+.guess-input {
+    display: block; /* z inline -> block */
+    margin: 0 auto; /* wyœrodkowanie */
+    max-width: 1600px; /* by³o sztywne 800px */
+    box-sizing: border-box; /* szerokoœæ = razem z borderem */
+    font-size: 1.45rem; /* trochê mniejszy tekst */
+    line-height: 1.2;
+}
+
+/* Kontener typeahead w kolumnie, wszystko centralnie */
+.input-wrapper-guess .typeahead {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* œrodek w poziomie */
+}
+
+/* Przycisk pod inpem te¿ na œrodku */
+.input-wrapper-guess .right-btn {
+    align-self: center;
+}
+
+/* Na wê¿szych ekranach odrobinkê ciaœniej */
+@media (max-width: 640px) {
+    .guess-input {
+        font-size: 1.25rem;
+        max-width: 560px;
+    }
+}
+
+.home-title:focus {
+    outline: none !important;
+}
+
+/* === HOME (spójne z .song-hero) === */
+.home-container {
+    max-width: 1200px;
+    
+    padding: 2.5rem 1rem 4rem;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    text-align: center;
+}
+
+/* HERO */
+.home-hero {
+    position: relative;
+    width: 100%;
+    max-width: 980px;
+    padding: 3rem 2rem 2.4rem;
+    background: rgba(15,23,42,.72);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 1.25rem;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+}
+
+    .home-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(1100px 260px at 50% -10%, rgba(56,189,248,.22), rgba(255,255,255,0) 60%);
+        pointer-events: none;
+    }
+
+    .home-hero::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: 100%;
+        height: 6px;
+        border-radius: 9999px;
+        background: linear-gradient(90deg,#ffffff,#ffe400,#39ff14,#38bdf8,#ff2097,#ffffff);
+        opacity: .9;
+    }
+
+/* znaczek/znacznik jak w grze */
+.home-hero__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .45rem .9rem;
+    border-radius: 9999px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    background: linear-gradient(180deg,#1f2937,#0b1220);
+    color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06),0 6px 18px rgba(0,0,0,.35);
+}
+
+/* tytu³ – gradient + mocny cieñ dla czytelnoœci */
+.home-hero__title {
+    margin: .5rem 0 0;
+    font-weight: 900;
+    font-size: clamp(2.2rem,6.4vw,3.6rem);
+    line-height: 1.1;
+    background: linear-gradient(90deg,#ffe400,#22c55e,#38bdf8,#ff2097,#ffffff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 3px 22px rgba(0,0,0,.65), 0 0 18px rgba(56,189,248,.25);
+}
+
+.home-hero__subtitle {
+    margin: .25rem auto 1.25rem;
+    max-width: 780px;
+    font-size: clamp(1rem,2.4vw,1.25rem);
+    opacity: .95;
+    text-shadow: 0 2px 12px rgba(0,0,0,.6);
+}
+
+/* KARTY GIER */
+.home-cards {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 1.2rem;
+}
+
+@media (max-width: 980px) {
+    .home-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.home-card {
+    text-align: left;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 1rem;
+    padding: 1.6rem 1.6rem 1.2rem;
+    color: #f9fafb;
+    box-shadow: 0 14px 34px rgba(0,0,0,.25);
+    backdrop-filter: blur(6px);
+    position: relative;
+    transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+    .home-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 40px rgba(0,0,0,.32);
+    }
+
+.home-card__head {
+    margin: -.2rem -1.6rem 1rem;
+    padding: .65rem 1.6rem;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+/* akcenty typów */
+.home-card.is-music {
+    border-left: 5px solid #38bdf8;
+}
+
+.home-card.is-movie {
+    border-left: 5px solid #ef4444;
+}
+
+.home-card.is-music .home-card__head {
+    background: linear-gradient(90deg, rgba(56,189,248,.18), rgba(255,255,255,0));
+}
+
+.home-card.is-movie .home-card__head {
+    background: linear-gradient(90deg, rgba(239,68,68,.18), rgba(255,255,255,0));
+}
+
+.home-card h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #fcd34d;
+}
+
+.home-card p {
+    margin: .65rem 0;
+    line-height: 1.5;
+}
+
+.home-card ul {
+    margin: .2rem 0 0 1.25rem;
+    line-height: 1.5;
+}
+
+/* (porz¹dek) stare klasy z Home mog¹ zostaæ, ale nie s¹ ju¿ u¿ywane */
