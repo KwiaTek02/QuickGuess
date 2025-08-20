@@ -1,0 +1,35 @@
+﻿@page "/verified"
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.WebUtilities
+
+<div class="fullscreen-bg">
+    <div class="login-card enhanced">
+        @if (Status == "ok")
+        {
+            <h2 class="login-title">Konto aktywne 🎉</h2>
+            <p style="color:#16a34a;font-weight:600">
+                Twój e-mail został potwierdzony. Możesz się teraz zalogować.
+            </p>
+            <button class="btn login-btn" @onclick='() => Navigation.NavigateTo("/login")'>
+                Przejdź do logowania
+            </button>
+        }
+        else
+        {
+            <h2 class="login-title">Ups…</h2>
+            <p class="error">Link jest nieprawidłowy albo wygasł.</p>
+            <button class="btn login-btn" @onclick='() => Navigation.NavigateTo("/login")'>
+                Przejdź do logowania
+            </button>
+        }
+    </div>
+</div>
+
+@code{
+    string Status = "";
+    protected override void OnInitialized()
+    {
+        var q = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (q.TryGetValue("status", out var s)) Status = s.ToString();
+    }
+}

@@ -3615,7 +3615,7 @@ input:disabled {
     font-weight: 900;
     font-size: clamp(2.2rem,6.4vw,3.6rem);
     line-height: 1.1;
-    background: linear-gradient(90deg,#ffe400,#22c55e,#38bdf8,#ff2097,#ffffff);
+    background: linear-gradient(90deg,#ffe400,#d3e400,#7bc523,#22c55e);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -3846,4 +3846,37 @@ input:disabled {
     .profile-stats-grid {
         grid-template-columns: 1fr;
     }
+}
+
+
+/* logo */
+
+.nav-bar .logo {
+    display: flex;
+    align-items: center;
+    gap: .6rem; /* odstêp miêdzy ikon¹ a tekstem */
+}
+
+    .nav-bar .logo .logo-icon {
+        height: 50px; /* dostosuj w razie potrzeby */
+        width: auto;
+        display: block;
+    }
+
+    .nav-bar .logo:hover {
+        color: #00d1ff; /* dzia³a na tekst; obrazek zostaje bez zmian */
+    }
+
+/* Ikona logo w tytule na stronie g³ównej */
+.home-hero__title {
+    display: inline-flex; /* logo + tekst w jednej linii */
+    align-items: center;
+    gap: .6rem;
+}
+
+.home-hero__logo {
+    height: 56px; /* dopasuj w razie potrzeby */
+    width: auto;
+    display: block;
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,.4));
 }
