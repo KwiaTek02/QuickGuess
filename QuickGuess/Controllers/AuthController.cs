@@ -18,7 +18,7 @@ namespace QuickGuess.Controllers
     public class AuthController : ControllerBase
     {
         private readonly JwtTokenGenerator _jwt;
-
+        private readonly IWebHostEnvironment _env;
         // Branding / nadawca
         private readonly string _brandName = "QuickGuess";
         private readonly string _supportEmail = "quickguess.mail@gmail.com";
@@ -35,7 +35,7 @@ namespace QuickGuess.Controllers
 
         private readonly string _googleClientId;
 
-        public AuthController(IConfiguration config)
+        public AuthController(IConfiguration config, IWebHostEnvironment env)
         {
             _jwt = new JwtTokenGenerator(config);
 
@@ -49,6 +49,7 @@ namespace QuickGuess.Controllers
             _smtpPassword = config["Smtp:Password"] ?? ""; // ustaw przez Secret/ENV
 
             _googleClientId = config["GoogleAuth:ClientId"] ?? throw new InvalidOperationException("GoogleAuth:ClientId not set");
+            _env = env;
         }
 
         // ======================= AUTH =======================
@@ -196,16 +197,17 @@ namespace QuickGuess.Controllers
         {
             var record = await db.EmailVerificationTokens.FirstOrDefaultAsync(t => t.Token == token);
             if (record == null || record.Used || record.ExpiresAt < DateTime.UtcNow)
-                return BadRequest("Invalid or expired token");
+                return Redirect($"{_appBaseUrlFrontend.TrimEnd('/')}/verified?status=error");
 
             var user = await db.Users.FindAsync(record.UserId);
-            if (user == null) return NotFound();
+            if (user == null)
+                return Redirect($"{_appBaseUrlFrontend.TrimEnd('/')}/verified?status=error");
 
             user.EmailVerified = true;
             record.Used = true;
-
             await db.SaveChangesAsync();
-            return Ok("Email verified.");
+
+            return Redirect($"{_appBaseUrlFrontend.TrimEnd('/')}/verified?status=ok");
         }
 
         [HttpPost("request-password-reset")]
@@ -371,6 +373,18 @@ namespace QuickGuess.Controllers
             // multipart/alternative: najpierw TXT, potem HTML
             var plainView = AlternateView.CreateAlternateViewFromString(textBody, Encoding.UTF8, "text/plain");
             var htmlView = AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, "text/html");
+
+            var logoPath = Path.Combine(_env.WebRootPath, "media", "logonapisbialy.png");
+            if (System.IO.File.Exists(logoPath))
+            {
+                var logo = new LinkedResource(logoPath, "image/png")
+                {
+                    ContentId = "app-logo",
+                    TransferEncoding = System.Net.Mime.TransferEncoding.Base64
+                };
+                htmlView.LinkedResources.Add(logo);
+            }
+
             message.AlternateViews.Add(plainView);
             message.AlternateViews.Add(htmlView);
 
@@ -421,7 +435,14 @@ a.btn, a.btn:link, a.btn:visited, a.btn:hover, a.btn:active{{color:#ffffff!impor
         <tr><td class=""brandbar""></td></tr>
         <tr><td class=""inner"">
 
-          <a class=""logo"" href=""{_appBaseUrlFrontend}"" target=""_blank"">🎧 {_brandName}</a>
+          <div style=""text-align:center;margin:0 0 16px"">
+  <a href=""{_appBaseUrlFrontend}"" target=""_blank"" style=""text-decoration:none;display:inline-block"">
+    <img src=""cid:app-logo""
+         alt=""{_brandName}""
+         width=""120""
+         style=""display:block;margin:0 auto;border:0;outline:none;text-decoration:none;max-width:160px;height:auto"" />
+  </a>
+</div>
 
           <div class=""card"">
             <h1 class=""h1"">{title}</h1>
