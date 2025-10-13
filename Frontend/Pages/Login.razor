@@ -18,49 +18,49 @@
             <DataAnnotationsValidator />
             <ValidationSummary />
 
-            <div class="input-wrapper">
-                <i class="bi bi-envelope-fill input-icon"></i>
+        <div class="input-wrapper">
+            <i class="bi bi-envelope-fill input-icon"></i>
                 <InputText class="input-field" @bind-Value="Model.Email" placeholder="Email" disabled="@IsLoading" />
-            </div>
+        </div>
             <ValidationMessage For="@(() => Model.Email)" />
 
-            <div class="input-wrapper">
-                <i class="bi bi-lock-fill input-icon"></i>
+        <div class="input-wrapper">
+            <i class="bi bi-lock-fill input-icon"></i>
 
-                <input class="input-field"
+            <input class="input-field"
                        @bind="Model.Password"
-                       @bind:event="oninput"
-                       placeholder="Hasło"
-                       type="@(ShowPw ? "text" : "password")"
-                       disabled="@IsLoading" />
+                   @bind:event="oninput"
+                   placeholder="Hasło"
+                   type="@(ShowPw ? "text" : "password")"
+                   disabled="@IsLoading" />
 
-                <button class="icon-btn"
-                        type="button"
-                        @onclick="TogglePw"
-                        title="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")"
-                        aria-label="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")">
-                    <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
-                </button>
-            </div>
+            <button class="icon-btn"
+                    type="button"
+                    @onclick="TogglePw"
+                    title="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")"
+                    aria-label="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")">
+                <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
+        </div>
             <ValidationMessage For="@(() => Model.Password)" />
 
-            <div class="auth-links left-align">
-                <a href="/forgot-password">Zapomniałeś hasła?</a>
-            </div>
-
+        <div class="auth-links left-align">
+            <a href="/forgot-password">Zapomniałeś hasła?</a>
+        </div>
+        
             <button type="submit" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
-                @if (IsLoading)
-                {
-                    <span class="btn-spinner" aria-hidden="true"></span>
-                    <span>Logowanie...</span>
-                }
-                else
-                {
-                    <span>Zaloguj się</span>
-                }
-            </button>
+            @if (IsLoading)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+                <span>Logowanie...</span>
+            }
+            else
+            {
+                <span>Zaloguj się</span>
+            }
+        </button>
         </EditForm>
-
+        
         <div class="google-btn-wrapper" style="margin-top: 0.75rem;">
             <div id="gsi_btn"></div>
         </div>

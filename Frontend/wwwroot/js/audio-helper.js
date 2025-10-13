@@ -130,7 +130,7 @@ window.initVisualizer = (barCount = 24) => {
     const audio = document.querySelector("audio");
     if (!audio) return;
 
-    initAudioChain(audio); 
+    initAudioChain(audio);
 
     const root = document.getElementById("visualizer");
     if (!root) return;

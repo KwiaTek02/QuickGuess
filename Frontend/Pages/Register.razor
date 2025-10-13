@@ -17,87 +17,87 @@
         <EditForm Model="@Model" OnValidSubmit="@RegisterUser">
             <DataAnnotationsValidator />
 
-            <div class="input-wrapper">
-                <i class="bi bi-person-fill input-icon"></i>
+        <div class="input-wrapper">
+            <i class="bi bi-person-fill input-icon"></i>
                 <InputText class="input-field" @bind-Value="Model.Username" placeholder="Nazwa użytkownika" disabled="@IsLoading" />
-            </div>
+        </div>
             <ValidationMessage For="@(() => Model.Username)" />
 
-            <div class="input-wrapper">
-                <i class="bi bi-envelope-fill input-icon"></i>
+        <div class="input-wrapper">
+            <i class="bi bi-envelope-fill input-icon"></i>
                 <InputText class="input-field" @bind-Value="Model.Email" placeholder="Email" disabled="@IsLoading" />
-            </div>
+        </div>
             <ValidationMessage For="@(() => Model.Email)" />
 
-            <div class="input-wrapper has-popover">
-                <i class="bi bi-lock-fill input-icon"></i>
+        <div class="input-wrapper has-popover">
+            <i class="bi bi-lock-fill input-icon"></i>
 
-                <input class="input-field"
+            <input class="input-field"
                        @bind="Model.Password"
-                       @bind:event="oninput"
-                       placeholder="Hasło"
-                       type="@(ShowPw ? "text" : "password")"
-                       disabled="@IsLoading"
-                       @onfocus="() => PwFocused = true"
-                       @onblur="() => PwFocused = false" />
+                   @bind:event="oninput"
+                   placeholder="Hasło"
+                   type="@(ShowPw ? "text" : "password")"
+                   disabled="@IsLoading"
+                   @onfocus="() => PwFocused = true"
+                   @onblur="() => PwFocused = false" />
 
-                <button class="icon-btn" type="button" @onclick="() => ShowPw = !ShowPw" title="Pokaż/ukryj">
-                    <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
-                </button>
+            <button class="icon-btn" type="button" @onclick="() => ShowPw = !ShowPw" title="Pokaż/ukryj">
+                <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
 
                 @if (PwFocused || !string.IsNullOrEmpty(Model.Password))
-                {
-                    <div class="pw-popover" role="dialog" aria-label="Wymagania hasła">
-                        <div class="pw-popover__arrow"></div>
-                        <ul class="pw-rules in-popover">
+            {
+                <div class="pw-popover" role="dialog" aria-label="Wymagania hasła">
+                    <div class="pw-popover__arrow"></div>
+                    <ul class="pw-rules in-popover">
                             <li class="@(Model.Password?.Length >= 8 ? "ok" : null)">min. 8 znaków</li>
-                            <li class="@(HasUpper ? "ok" : null)">wielka litera</li>
-                            <li class="@(HasLower ? "ok" : null)">mała litera</li>
-                            <li class="@(HasDigit ? "ok" : null)">cyfra</li>
-                            <li class="@(HasSpecial ? "ok" : null)">znak specjalny</li>
-                        </ul>
-                    </div>
-                }
-            </div>
+                        <li class="@(HasUpper ? "ok" : null)">wielka litera</li>
+                        <li class="@(HasLower ? "ok" : null)">mała litera</li>
+                        <li class="@(HasDigit ? "ok" : null)">cyfra</li>
+                        <li class="@(HasSpecial ? "ok" : null)">znak specjalny</li>
+                    </ul>
+                </div>
+            }
+        </div>
             <ValidationMessage For="@(() => Model.Password)" />
+        
+        <div class="pw-meter" aria-hidden="true">
+            <div class="pw-meter__fill" style="width:@StrengthPct%"></div>
+            <div class="pw-meter__label">Siła hasła: @StrengthLabel</div>
+        </div>
 
-            <div class="pw-meter" aria-hidden="true">
-                <div class="pw-meter__fill" style="width:@StrengthPct%"></div>
-                <div class="pw-meter__label">Siła hasła: @StrengthLabel</div>
-            </div>
+        <div class="input-wrapper">
+            <i class="bi bi-lock-fill input-icon"></i>
 
-            <div class="input-wrapper">
-                <i class="bi bi-lock-fill input-icon"></i>
-
-                <input class="input-field"
+            <input class="input-field"
                        @bind="Model.RepeatPassword"
-                       @bind:event="oninput"
-                       placeholder="Powtórz hasło"
-                       type="@(ShowRepeat ? "text" : "password")"
-                       disabled="@IsLoading" />
+                   @bind:event="oninput"
+                   placeholder="Powtórz hasło"
+                   type="@(ShowRepeat ? "text" : "password")"
+                   disabled="@IsLoading" />
 
-                <button class="icon-btn" type="button" @onclick="() => ShowRepeat = !ShowRepeat" title="Pokaż/ukryj">
-                    <i class="bi @(ShowRepeat ? "bi-eye-slash" : "bi-eye")"></i>
-                </button>
-            </div>
+            <button class="icon-btn" type="button" @onclick="() => ShowRepeat = !ShowRepeat" title="Pokaż/ukryj">
+                <i class="bi @(ShowRepeat ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
+        </div>
             <ValidationMessage For="@(() => Model.RepeatPassword)" />
 
             <button type="submit" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
-                @if (IsLoading)
-                {
-                    <span class="btn-spinner" aria-hidden="true"></span>
-                    <span>Rejestrowanie...</span>
-                }
-                else
-                {
-                    <span>Zarejestruj się</span>
-                }
-            </button>
+            @if (IsLoading)
+            {
+                <span class="btn-spinner" aria-hidden="true"></span>
+                <span>Rejestrowanie...</span>
+            }
+            else
+            {
+                <span>Zarejestruj się</span>
+            }
+        </button>
 
-            <div class="auth-links center-row">
-                <span>Masz już konto?</span>
-                <a href="/login" style="margin-left: 0.4rem;">Zaloguj się</a>
-            </div>
+        <div class="auth-links center-row">
+            <span>Masz już konto?</span>
+            <a href="/login" style="margin-left: 0.4rem;">Zaloguj się</a>
+        </div>
         </EditForm>
     </div>
 </div>
@@ -116,7 +116,7 @@
         [MaxLength(32, ErrorMessage = "Maks. 32 znaki.")]
         [RegularExpression(@"^[A-Za-z0-9._-]+$", ErrorMessage = "Dozwolone są litery, cyfry, kropki, myślniki i podkreślenia.")]
         public string Username { get; set; } = "";
-
+    
         [Required(ErrorMessage = "Email jest wymagany.")]
         [EmailAddress(ErrorMessage = "Podaj poprawny email.")]
         [MaxLength(254)]
@@ -144,7 +144,7 @@
         {
             Navigation.NavigateTo("/panel", true);
         }
-    }
+        }
 
     int StrengthPct => CalculateStrengthPct(Model.Password);
     string StrengthLabel => StrengthPct <= 40 ? "słabe"

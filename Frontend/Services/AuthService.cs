@@ -53,7 +53,7 @@ namespace Frontend.Services
         }
 
         public async Task<AuthResult> Login(string email, string password)
-        {
+            {
             var response = await _http.PostAsJsonAsync("/api/auth/login", new { Email = email, Password = password });
 
             if (!response.IsSuccessStatusCode)
@@ -71,7 +71,7 @@ namespace Frontend.Services
         }
 
         public async Task<AuthResult> Register(string username, string email, string password)
-        {
+            {
             var response = await _http.PostAsJsonAsync("/api/auth/register", new { Username = username, Email = email, Password = password });
 
             if (!response.IsSuccessStatusCode)

@@ -12,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
 
+
+// Add services to the container.
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -24,6 +27,29 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHostedService<QuickGuess.Services.Game.GameSessionCleaner>();
 
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\nEnter 'Bearer' [space] and then your token.\r\n\r\nExample: \"Bearer eyJhbGci...\"",
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+        {
+            new OpenApiSecurityScheme {
+                Reference = new OpenApiReference {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});*/
+
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
@@ -32,6 +58,12 @@ var key = Encoding.UTF8.GetBytes(jwtSettings.Secret);
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT secret not configured.");
 Console.WriteLine(">>> JWT SECRET LENGTH: " + jwtSecret.Length);
 Console.WriteLine(">>> JWT SECRET (first 10 chars): " + jwtSecret.Substring(0, 10));
+
+//var key = Encoding.ASCII.GetBytes(jwtSecret);
+//var key = Convert.FromBase64String(jwtSecret);
+//var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+
 
 builder.Services.AddAuthentication(options =>
     {
@@ -75,6 +107,7 @@ var app = builder.Build();
 
 app.MapOpenApi();
 
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapScalarApiReference(options =>
@@ -87,6 +120,9 @@ if (app.Environment.IsDevelopment())
     });
   
 }
+
+
+
 
 app.UseHttpsRedirection();
 app.UseRouting();

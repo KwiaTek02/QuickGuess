@@ -182,7 +182,7 @@
         <button class="submit-btn right-btn" @onclick="SubmitGuess" disabled="@Answered">
             ✅ Zatwierdź
         </button>
-        
+
 
 
         <div class="typeahead__panel @(OpenSuggestions ? "is-open" : "")" id="title-suggestions" role="listbox">
@@ -726,7 +726,7 @@
         SuggestionsLoading = false;
     }
 
-
+    
     private static string HighlightMatch(string text, string query)
     {
         if (string.IsNullOrWhiteSpace(text)) return System.Net.WebUtility.HtmlEncode(text);
