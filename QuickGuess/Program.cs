@@ -27,7 +27,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHostedService<QuickGuess.Services.Game.GameSessionCleaner>();
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+    /*c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
     {
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey,
