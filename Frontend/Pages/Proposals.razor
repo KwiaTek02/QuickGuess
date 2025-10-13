@@ -11,7 +11,6 @@
 
     <div class="profile-container proposals-shell @((activeTab == "admin-pending" || activeTab == "admin-approved") ? "is-wide" : "is-large")">
 
-        <!-- Zakładki główne -->
         <nav class="tabs">
             <button class="tab @(activeTab == "songs" ? "active" : null)"
                     @onclick='() => SwitchTab("songs")'>
@@ -76,7 +75,6 @@
 
 
                 <div class="propose-inputs">
-                    <!-- TYTUŁ (120) -->
                     <input class="input-title"
                            placeholder="@(activeTab == "songs" ? "np. The Weeknd - Blinding Lights (2020)" : "np. Interstellar (2014)")"
                            @bind="titleInput"
@@ -86,7 +84,6 @@
                         <div class="char-counter">@((titleInput?.Length ?? 0))/120</div>
                     </div>
 
-                    <!-- NOTATKA (50) -->
                     <input class="input-note"
                            placeholder="(opcjonalnie) Krótka notatka "
                            @bind="noteInput"
@@ -139,7 +136,6 @@
                         </select>
                     </div>
 
-                    @* Jesteśmy w bloku else – NIE używaj @{ } *@
                     var view = AdminViewItems.ToList();
 
                     @if (view.Count == 0)
@@ -262,7 +258,6 @@
 </div>
 
 @code {
-    // UI
     string activeTab = "songs";
     string titleInput = "";
     string noteInput = "";
@@ -272,13 +267,9 @@
     HashSet<Guid> processing = new();
     string adminMsg = "";
 
-
-
-    // limity dzienne
     int todaySongs = 0;
     int todayMovies = 0;
 
-    // admin
     bool isAdmin = false;
     bool loadingAdmin = false;
     List<ProposalDto> pending = new();
@@ -290,7 +281,6 @@
     protected override async Task OnInitializedAsync()
     {
         await RefreshCounts();
-        // delikatnie sprawdzamy czy user to admin (bez crashy)
         try
         {
             var client = await AuthHttp.GetClientAsync();
@@ -327,7 +317,7 @@
             todaySongs = counts?.Songs ?? 0;
             todayMovies = counts?.Movies ?? 0;
         }
-        catch { /* pomijamy */ }
+        catch {  }
     }
 
     async Task SubmitProposal()
@@ -359,8 +349,6 @@
         }
     }
 
-
-    // ADMIN
     async Task LoadAdminTab()
     {
         loadingAdmin = true;
@@ -376,7 +364,7 @@
                 approved = await client.GetFromJsonAsync<List<ProposalDto>>("api/admin/approved-proposals") ?? new();
             }
         }
-        catch { /* zignoruj */ }
+        catch {  }
         finally { loadingAdmin = false; }
     }
 
@@ -389,13 +377,12 @@
             if (resp.IsSuccessStatusCode)
             {
                 pending = pending.Where(p => p.Id != id).ToList();
-                if (approve) await LoadAdminTab(); // odśwież zatwierdzone jeśli ta zakładka jest otwarta
+                if (approve) await LoadAdminTab(); 
             }
         }
-        catch { /* pomijamy */ }
+        catch {  }
     }
 
-    // DTOs
     class CreateProposal { public string Type { get; set; } = ""; public string Title { get; set; } = ""; public string? ArtistOrNote { get; set; } }
     class CountsDto { public int Songs { get; set; } public int Movies { get; set; } }
 
@@ -407,7 +394,6 @@
                 ? pending.AsEnumerable()
                 : approved.AsEnumerable();
 
-            // Filtrowanie (bez polskich znaków i bez rozróżniania wielkości)
             if (!string.IsNullOrWhiteSpace(adminQuery))
             {
                 var q = Norm(adminQuery);
@@ -419,13 +405,12 @@
                 );
             }
 
-            // Sortowanie
             list = adminSort switch
             {
                 "title_asc" => list.OrderBy(p => Norm(p.Title)),
                 "title_desc" => list.OrderByDescending(p => Norm(p.Title)),
                 "date_asc" => list.OrderBy(p => AdminDate(p)),
-                _ => list.OrderByDescending(p => AdminDate(p)) // "date_desc"
+                _ => list.OrderByDescending(p => AdminDate(p)) 
             };
 
             return list;
@@ -437,7 +422,6 @@
             ? (p.ReviewedAt ?? p.CreatedAt)
             : p.CreatedAt;
 
-    // Normalizacja stringów: lower + bez znaków diakrytycznych
     static string Norm(string? s)
     {
         if (string.IsNullOrWhiteSpace(s)) return "";
@@ -464,7 +448,6 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                // usuń z UI
                 approved = approved.Where(x => x.Id != id).ToList();
                 adminMsg = "✅ Oznaczono jako dodane do bazy.";
             }

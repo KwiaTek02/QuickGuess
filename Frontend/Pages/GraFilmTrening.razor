@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
+@inject TokenGuard Guard
 
 <div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
     <h1 class="game-title">🎬 Jaki To Film?</h1>
@@ -30,7 +31,6 @@
     }
     else if (IsRoundLoading || CurrentMovie is null)
     {
-        <!-- PRELOADER RUNDY -->
         <div class="preloader" aria-busy="true" aria-live="polite">
             <i class="fas fa-film fa-spin" aria-hidden="true"></i>
             <p>Ładuję rundę…</p>
@@ -61,7 +61,6 @@
                 </div>
             }
 
-            @* === OKNO WYNIKU (z loaderem) === *@
             @if (Answered)
             {
                 <div class="result-modal" role="dialog" aria-modal="true">
@@ -98,7 +97,6 @@
                 </div>
             }
 
-            @* === TYPEAHEAD === *@
             <div class="film-input-wrapper-guess" id="guess-wrapper">
                 <div class="typeahead film-typeahead">
                     <input class="film-guess-input typeahead__input"
@@ -176,8 +174,8 @@
     }
 
     // === Nowe flagi ===
-    private bool IsRoundLoading = false;  // loader przed startem rundy
-    private bool IsResultLoading = false; // loader w oknie wyniku
+    private bool IsRoundLoading = false;  
+    private bool IsResultLoading = false; 
 
     private readonly Stopwatch _sw = new();
     private double LastAnswerDurationSec;
@@ -262,6 +260,8 @@
 
     protected async Task StartGame()
     {
+        if (!await Guard.EnsureValidTokenOrRedirect(Navigation.Uri)) return;
+
         GameSessionId = Guid.NewGuid();
         Started = true;
         Answered = false;
@@ -270,7 +270,7 @@
         LastGuessCorrect = false;
         TitleSuggestions.Clear();
 
-        IsRoundLoading = true;  // ⇦ pokaż loader rundy
+        IsRoundLoading = true; 
 
         var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
         if (movies?.Count > 0)
@@ -286,7 +286,7 @@
             StartCountdown();
         }
 
-        IsRoundLoading = false; // ⇦ zdejmij loader
+        IsRoundLoading = false; 
         StateHasChanged();
     }
 
@@ -295,7 +295,7 @@
         if (CurrentMovie == null || Answered) return;
 
         Answered = true;
-        IsResultLoading = true; // ⇦ pokaż loader w modalu
+        IsResultLoading = true; 
         await JS.InvokeVoidAsync("Timer.stop");
 
         _sw.Stop();
@@ -325,7 +325,14 @@
         LastGuessCorrect = result!.Correct;
         ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
 
-        IsResultLoading = false; // ⇦ ukryj loader
+        if (LastGuessCorrect)
+        {
+            // 💥 Odpal konfetti z dwóch stron
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "left");
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "right");
+        }
+
+        IsResultLoading = false; 
         StateHasChanged();
     }
 

@@ -1,8 +1,8 @@
 ﻿@page "/login"
+@using System.ComponentModel.DataAnnotations
 @using Frontend.Services
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
-@inject HttpClient Http
 @inject IJSRuntime JS
 
 <div class="fullscreen-bg">
@@ -14,53 +14,54 @@
             <p class="error">@Error</p>
         }
 
-        <div class="input-wrapper">
-            <i class="bi bi-envelope-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Email" placeholder="Email" />
-        </div>
+        <EditForm Model="@Model" OnValidSubmit="@LoginUser">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-        <div class="input-wrapper">
-            <i class="bi bi-lock-fill input-icon"></i>
+            <div class="input-wrapper">
+                <i class="bi bi-envelope-fill input-icon"></i>
+                <InputText class="input-field" @bind-Value="Model.Email" placeholder="Email" disabled="@IsLoading" />
+            </div>
+            <ValidationMessage For="@(() => Model.Email)" />
 
-            <input class="input-field"
-                   @bind="Password"
-                   @bind:event="oninput"
-                   placeholder="Hasło"
-                   type="@(ShowPw ? "text" : "password")"
-                   disabled="@IsLoading" />
+            <div class="input-wrapper">
+                <i class="bi bi-lock-fill input-icon"></i>
 
-            <button class="icon-btn"
-                    type="button"
-                    @onclick="TogglePw"
-                    title="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")"
-                    aria-label="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")">
-                <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+                <input class="input-field"
+                       @bind="Model.Password"
+                       @bind:event="oninput"
+                       placeholder="Hasło"
+                       type="@(ShowPw ? "text" : "password")"
+                       disabled="@IsLoading" />
+
+                <button class="icon-btn"
+                        type="button"
+                        @onclick="TogglePw"
+                        title="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")"
+                        aria-label="@(ShowPw ? "Ukryj hasło" : "Pokaż hasło")">
+                    <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+                </button>
+            </div>
+            <ValidationMessage For="@(() => Model.Password)" />
+
+            <div class="auth-links left-align">
+                <a href="/forgot-password">Zapomniałeś hasła?</a>
+            </div>
+
+            <button type="submit" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
+                @if (IsLoading)
+                {
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                    <span>Logowanie...</span>
+                }
+                else
+                {
+                    <span>Zaloguj się</span>
+                }
             </button>
-        </div>
-        
-
-
-        <div class="auth-links left-align">
-            <a href="/forgot-password">Zapomniałeś hasła?</a>
-        </div>
-        
-        <button @onclick="LoginUser" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
-            @if (IsLoading)
-            {
-                <span class="btn-spinner" aria-hidden="true"></span>
-                <span>Logowanie...</span>
-            }
-            else
-            {
-                <span>Zaloguj się</span>
-            }
-        </button>
-        
-
-        @*<button @onclick="LoginUser" class="btn login-btn">Zaloguj się</button>*@
+        </EditForm>
 
         <div class="google-btn-wrapper" style="margin-top: 0.75rem;">
-            
             <div id="gsi_btn"></div>
         </div>
 
@@ -73,40 +74,52 @@
 
 @code {
     bool ShowPw;
-
     void TogglePw() => ShowPw = !ShowPw;
-    string Email = "";
-    string Password = "";
+
     string Error = "";
     bool IsLoading = false;
-    bool ShowRepeat;
 
     private const string GoogleClientId = "628190551033-vgs07tcj28liadrpe05ajpfh7u083qga.apps.googleusercontent.com";
-
     private DotNetObjectReference<Login>? _dotNetRef;
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email jest wymagany.")]
+        [EmailAddress(ErrorMessage = "Podaj poprawny email.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Hasło jest wymagane.")]
+        public string Password { get; set; } = "";
+    }
+
+    LoginModel Model = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
+        if (!string.IsNullOrWhiteSpace(token) && !TokenGuard.IsExpired(token))
+        {
+            Navigation.NavigateTo("/panel", true);
+            return;
+        }
 
+        if (!firstRender) return;
         _dotNetRef = DotNetObjectReference.Create(this);
-        // init + render oficjalnego przycisku
         await JS.InvokeVoidAsync("googleAuth.init", GoogleClientId, _dotNetRef);
-        await JS.InvokeVoidAsync("googleAuth.renderButton", "gsi_btn"); // theme/size itp. bierzemy z JS
+        await JS.InvokeVoidAsync("googleAuth.renderButton", "gsi_btn");
     }
 
     [JSInvokable]
     public async Task OnGoogleCredential(string credential)
     {
-        // credential = ID token (JWT) od Google
-        var ok = await AuthService.GoogleLogin(credential);
-        if (ok)
+        var res = await AuthService.GoogleLogin(credential);
+        if (res.Success)
         {
             Navigation.NavigateTo("/panel", true);
         }
         else
         {
-            Error = "Logowanie Google nie powiodło się.";
+            Error = res.Error ?? "Logowanie Google nie powiodło się.";
             StateHasChanged();
         }
     }
@@ -116,14 +129,14 @@
         if (IsLoading) return;
         Error = "";
         IsLoading = true;
-        await InvokeAsync(StateHasChanged); // odśwież UI przed wywołaniem serwisu
+        await InvokeAsync(StateHasChanged);
 
         try
         {
-            var success = await AuthService.Login(Email, Password);
-            if (!success)
+            var res = await AuthService.Login(Model.Email, Model.Password);
+            if (!res.Success)
             {
-                Error = "Niepoprawne dane logowania lub email niezweryfikowany.";
+                Error = res.Error ?? "Niepoprawne dane logowania.";
             }
             else
             {
@@ -140,7 +153,4 @@
     {
         _dotNetRef?.Dispose();
     }
-
-   
-
 }

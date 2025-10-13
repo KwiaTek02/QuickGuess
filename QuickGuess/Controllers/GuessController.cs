@@ -34,7 +34,7 @@ namespace QuickGuess.Controllers
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
             string correctTitle;
-            string displayTitle = null!; // nowa zmienna
+            string displayTitle = null!; 
 
             if (type == "song")
             {
@@ -48,7 +48,7 @@ namespace QuickGuess.Controllers
                 var movie = await _db.Movies.FindAsync(request.ItemId);
                 if (movie == null) return NotFound("Movie not found");
                 correctTitle = movie.Title;
-                // tu możesz też zrobić podobny format dla filmów
+
                 displayTitle = $"{movie.Title} ({movie.ReleaseYear})";
             }
 
@@ -78,7 +78,6 @@ namespace QuickGuess.Controllers
                     _db.Leaderboards.Add(board);
                 }
 
-                // ⛳ Łączny wynik nigdy poniżej 0
                 board.ScoreTotal = Math.Max(0, board.ScoreTotal + score);
 
                 if (type == "song")
@@ -97,7 +96,6 @@ namespace QuickGuess.Controllers
                 var board = await _db.Leaderboards.FindAsync(userId);
                 totalScore = board?.ScoreTotal ?? 0;
 
-                // oblicz ranking (liczba osób z większym wynikiem + 1)
                 position = await _db.Leaderboards.CountAsync(b => b.ScoreTotal > totalScore) + 1;
             }
 

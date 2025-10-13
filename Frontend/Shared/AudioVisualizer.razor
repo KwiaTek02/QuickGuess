@@ -1,7 +1,9 @@
 ﻿@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
 @code {
     [Parameter] public bool IsPlaying { get; set; }
-    [Parameter] public int Bars { get; set; } = 30; // było 32
+    [Parameter] public int Bars { get; set; } = 30;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -14,6 +16,11 @@
             await JSRuntime.InvokeVoidAsync("startVisualizer");
         else
             await JSRuntime.InvokeVoidAsync("stopVisualizer");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JSRuntime.InvokeVoidAsync("disposeVisualizer"); } catch { }
     }
 }
 

@@ -9,7 +9,7 @@ namespace QuickGuess.Controllers
 {
     [ApiController]
     [Route("api/stats")]
-    [Authorize] // jeśli masz autoryzację
+    [Authorize]
     public class StatsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -18,7 +18,6 @@ namespace QuickGuess.Controllers
 
         private Guid GetUserId()
         {
-            // dopasuj do swojej autoryzacji
             var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
                       ?? User.FindFirstValue("sub");
             return Guid.Parse(sub);
@@ -37,7 +36,6 @@ namespace QuickGuess.Controllers
             var incorrect = games - correct;
             var winRate = games > 0 ? (double)correct / games : 0.0;
 
-            // min po nullable int – OK
             var bestMs = await q.Where(g => g.Correct)
                 .Select(g => (int?)g.Duration)
                 .MinAsync() ?? 0;
@@ -45,17 +43,13 @@ namespace QuickGuess.Controllers
 
             var avgMs = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
             var avgTime = avgMs / 1000.0;
-            // alternatywnie:
-            // var avgTime = await q.AnyAsync() ? await q.AverageAsync(g => (double)g.Duration) : 0.0;
 
-            // total score – najpierw spróbuj z leaderboards, fallback do sumy guesses
             var totalScore = await _db.Leaderboards
                                  .Where(l => l.UserId == userId)
                                  .Select(l => (int?)l.ScoreSongs)
                                  .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
-            // ⛳ nigdy poniżej 0
             totalScore = Math.Max(totalScore, 0);
 
             var myScore = await _db.Leaderboards
@@ -63,7 +57,6 @@ namespace QuickGuess.Controllers
                 .Select(l => (int?)l.ScoreSongs)
                 .FirstOrDefaultAsync() ?? totalScore;
 
-            // (opcjonalnie)
             myScore = Math.Max(myScore, 0);
 
 
@@ -107,8 +100,6 @@ namespace QuickGuess.Controllers
             var avgMs = await q.Select(g => (double?)g.Duration).AverageAsync() ?? 0.0;
             var avgTime = avgMs / 1000.0;
 
-
-            // Suma punktów z leaderboards (kolumna dla filmów) lub fallback do sumy z guesses
             var totalScore = await _db.Leaderboards
                                  .Where(l => l.UserId == userId)
                                  .Select(l => (int?)l.ScoreMovies)
@@ -153,7 +144,6 @@ namespace QuickGuess.Controllers
             var q = _db.Guesses.AsNoTracking()
                 .Where(g => g.UserId == userId && g.Type == "song" && g.Mode == "ranking");
 
-            // --- identycznie jak w GetMySongRankingStats() ---
             var games = await q.CountAsync();
             var correct = await q.CountAsync(g => g.Correct);
             var incorrect = games - correct;
@@ -170,7 +160,6 @@ namespace QuickGuess.Controllers
                                  .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
-            // ⛳ nigdy poniżej 0 (fallback z guesses mógłby dać minus)
             totalScore = Math.Max(totalScore, 0);
 
             var myScore = await _db.Leaderboards
@@ -178,7 +167,6 @@ namespace QuickGuess.Controllers
                 .Select(l => (int?)l.ScoreSongs)
                 .FirstOrDefaultAsync() ?? totalScore;
 
-            // (opcjonalnie) też zaflooruj:
             myScore = Math.Max(myScore, 0);
 
             var rankingPosition = myScore > 0
@@ -225,7 +213,6 @@ namespace QuickGuess.Controllers
                                  .FirstOrDefaultAsync()
                              ?? await q.SumAsync(g => g.Score);
 
-            // ⛳ nigdy poniżej 0 (fallback z guesses mógłby dać minus)
             totalScore = Math.Max(totalScore, 0);
 
 
@@ -235,7 +222,6 @@ namespace QuickGuess.Controllers
                 .Select(l => (int?)l.ScoreMovies)
                 .FirstOrDefaultAsync() ?? totalScore;
 
-            // (opcjonalnie) też zaflooruj:
             myScore = Math.Max(myScore, 0);
 
             var rankingPosition = myScore > 0

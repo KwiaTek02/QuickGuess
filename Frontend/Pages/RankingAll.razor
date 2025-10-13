@@ -12,7 +12,6 @@
             <div class="box-title-row">
                 <h3 class="box-title" style="margin: 0 0 .4rem;">🏆 Ogólne — wszyscy gracze</h3>
 
-                <!-- SZUKAJKA -->
                 <div style="display:flex; align-items:center; gap:.5rem;">
                     <input class="admin-search"
                            style="width:260px"
@@ -66,7 +65,7 @@
                             @foreach (var row in rows)
                             {
                                 var me = IsMe(row.Username);
-                                var place = OriginalPlace(row); // pozycja w pełnym rankingu (1-n)
+                                var place = OriginalPlace(row); 
 
                                 <li class="lb-row @(place <= 3 ? $"top{place}" : null) @(me ? "is-me" : null)"
                                     role="button"
@@ -147,7 +146,6 @@
 
     private void ClearSearch() => search = "";
 
-    // pozycja gracza w pełnym rankingu (1..N), używana także po przefiltrowaniu
     private int OriginalPlace(Row r)
         => leaderboard.FindIndex(x => string.Equals(x.Username, r.Username, StringComparison.OrdinalIgnoreCase)) + 1;
 
@@ -185,12 +183,11 @@
         await JS.InvokeVoidAsync("alert", "Nie udało się otworzyć profilu tego gracza.");
     }
 
-    // DTO pod endpoint „global-all”
     private class GlobalAllEntry
     {
         public Guid? PublicId { get; set; }
         public string Username { get; set; } = "";
-        public int Score { get; set; } // mapowane atrybutem ponizej
+        public int Score { get; set; } 
         [System.Text.Json.Serialization.JsonPropertyName("scoreTotal")]
         public int ScoreTotal { get => Score; set => Score = value; }
     }

@@ -1,11 +1,11 @@
 ﻿@page "/"
+@using Frontend.Services
 @inject NavigationManager Navigation
+@inject TokenGuard Guard
 
 <div class="home-container">
 
-    <!-- HERO: spójny ze .song-hero -->
     <section class="home-hero">
-
         <h1 class="home-hero__title" tabindex="-1">
             <img src="/images/logo.svg" alt="QuickGuess" class="home-hero__logo" />
             <span>Witamy w QuickGuess!</span>
@@ -14,14 +14,13 @@
             Wybierz jedną z naszych gier i sprawdź swoją wiedzę oraz refleks!
         </p>
 
-        <button class="btn-hero" @onclick='() => Navigation.NavigateTo("/panel")'>
+        <button class="btn-hero" @onclick="GoPanel">
             <span class="btn-hero__glow"></span>
             <i class="fas fa-play"></i>
             Zaczynajmy
         </button>
     </section>
 
-    <!-- KARTY GIER -->
     <section class="home-cards">
         <article class="home-card is-music">
             <header class="home-card__head">
@@ -56,3 +55,12 @@
         height: 100vh;
     }
 </style>
+
+@code {
+    private async Task GoPanel()
+    {
+        
+        if (await Guard.EnsureValidTokenOrRedirect("/panel"))
+            Navigation.NavigateTo("/panel");
+    }
+} 

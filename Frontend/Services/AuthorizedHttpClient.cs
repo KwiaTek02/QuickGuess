@@ -18,7 +18,7 @@ namespace Frontend.Services
         {
             var token = await _js.InvokeAsync<string>("localStorage.getItem", "authToken");
 
-            _http.DefaultRequestHeaders.Authorization = null; // ważne: usuń stary nagłówek
+            _http.DefaultRequestHeaders.Authorization = null; 
             if (!string.IsNullOrWhiteSpace(token))
             {
                 _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

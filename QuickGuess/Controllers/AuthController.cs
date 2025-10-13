@@ -19,15 +19,12 @@ namespace QuickGuess.Controllers
     {
         private readonly JwtTokenGenerator _jwt;
         private readonly IWebHostEnvironment _env;
-        // Branding / nadawca
         private readonly string _brandName = "QuickGuess";
         private readonly string _supportEmail = "quickguess.mail@gmail.com";
 
-        // Konfiguracja aplikacji / linków
         private readonly string _appBaseUrl;
         private readonly string _appBaseUrlFrontend;
 
-        // SMTP
         private readonly string _smtpHost;
         private readonly int _smtpPort;
         private readonly string _smtpUser;
@@ -39,33 +36,48 @@ namespace QuickGuess.Controllers
         {
             _jwt = new JwtTokenGenerator(config);
 
-            // Produkcyjny adres podstawowy – nie używamy localhost w mailach
             _appBaseUrl = config["App:BaseUrl"] ?? "https://localhost:7236";
             _appBaseUrlFrontend = config["App:FrontendBaseUrl"] ?? "https://localhost:7003";
 
             _smtpHost = config["Smtp:Host"] ?? "smtp.gmail.com";
             _smtpPort = int.TryParse(config["Smtp:Port"], out var p) ? p : 587;
             _smtpUser = config["Smtp:User"] ?? _supportEmail;
-            _smtpPassword = config["Smtp:Password"] ?? ""; // ustaw przez Secret/ENV
+            _smtpPassword = config["Smtp:Password"] ?? ""; 
 
             _googleClientId = config["GoogleAuth:ClientId"] ?? throw new InvalidOperationException("GoogleAuth:ClientId not set");
             _env = env;
         }
 
-        // ======================= AUTH =======================
-
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterRequest request, [FromServices] ApplicationDbContext db)
         {
-            if (await db.Users.AnyAsync(u => u.Email == request.Email))
-                return BadRequest("Email already registered");
+            request.Email = request.Email?.Trim();
+            request.Username = request.Username?.Trim();
+
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var emailNorm = request.Email!.ToLowerInvariant();
+            var usernameNorm = request.Username!.ToLowerInvariant();
+
+            if (await db.Users.AnyAsync(u => u.Email.ToLower() == emailNorm))
+            {
+                ModelState.AddModelError(nameof(request.Email), "Ten email jest już zajęty.");
+                return ValidationProblem(ModelState);
+            }
+
+            if (await db.Users.AnyAsync(u => u.Username.ToLower() == usernameNorm))
+            {
+                ModelState.AddModelError(nameof(request.Username), "Ta nazwa użytkownika jest już zajęta.");
+                return ValidationProblem(ModelState);
+            }
 
             PasswordHasher.CreateHash(request.Password, out string hash, out string salt);
 
             var user = new User
             {
                 Username = request.Username,
-                Email = request.Email,
+                Email = emailNorm,   
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 Provider = "local",
@@ -76,7 +88,6 @@ namespace QuickGuess.Controllers
             db.Users.Add(user);
             await db.SaveChangesAsync();
 
-            // token weryfikacyjny
             var token = TokenGenerator.GenerateToken(32);
             db.EmailVerificationTokens.Add(new EmailVerificationToken
             {
@@ -94,7 +105,14 @@ namespace QuickGuess.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest request, [FromServices] ApplicationDbContext db)
         {
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.Provider == "local");
+            request.Email = request.Email?.Trim();
+
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var emailNorm = request.Email!.ToLowerInvariant();
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNorm && u.Provider == "local");
             if (user == null || user.PasswordHash == null || user.PasswordSalt == null)
                 return Unauthorized("Invalid credentials");
 
@@ -120,7 +138,6 @@ namespace QuickGuess.Controllers
                 PublicId = user.PublicId!.Value
             });
         }
-
         [HttpPost("google-login")]
         public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request, [FromServices] ApplicationDbContext db)
         {
@@ -143,12 +160,10 @@ namespace QuickGuess.Controllers
             if (string.IsNullOrEmpty(email))
                 return Unauthorized("Google token has no email");
 
-            // ⬇️ KLUCZ: szukamy po e-mailu, niezależnie od provider'a
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
             if (user == null)
             {
-                // brak konta – tworzymy nowe „google”
                 user = new User
                 {
                     Email = payload.Email,
@@ -164,16 +179,12 @@ namespace QuickGuess.Controllers
             }
             else
             {
-                // konto już istnieje (np. 'local') – podpinamy Google do TEGO konta
                 if (string.IsNullOrWhiteSpace(user.GoogleId))
                     user.GoogleId = payload.Subject;
 
-                // jeśli konto lokalne nie było zweryfikowane – uznaj weryfikację Google
                 if (!user.EmailVerified)
                     user.EmailVerified = true;    
                 
-
-                // nie musimy zmieniać 'Provider' – konto może pozostać 'local'
                 if (user.PublicId is null || user.PublicId == Guid.Empty)
                     user.PublicId = Guid.NewGuid();
 
@@ -254,7 +265,6 @@ namespace QuickGuess.Controllers
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, [FromServices] ApplicationDbContext db)
         {
-            // 1) spróbuj ID jako int z kilku znanych claimów
             int? userId = null;
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)
                        ?? User.FindFirst("uid")
@@ -272,7 +282,6 @@ namespace QuickGuess.Controllers
             }
             else
             {
-                // 2) fallback: znajdź po e-mailu z tokena
                 var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
                 if (!string.IsNullOrWhiteSpace(email))
                     user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -306,11 +315,6 @@ namespace QuickGuess.Controllers
             return Ok("Password updated successfully.");
         }
 
-
-        // ======================= MAILE =======================
-
-
-
         private async Task SendVerificationEmail(string email, string token)
         {
             var verifyUrl = $"{_appBaseUrl}/api/auth/verify-email?token={Uri.EscapeDataString(token)}";
@@ -332,7 +336,7 @@ namespace QuickGuess.Controllers
 
         private async Task SendResetEmail(string email, string token)
         {
-            // ← kierujemy na frontend
+
             var resetUrl = $"{_appBaseUrlFrontend}/reset-password?token={Uri.EscapeDataString(token)}";
 
             string subject = $"{_brandName} — Reset hasła";
@@ -370,7 +374,6 @@ namespace QuickGuess.Controllers
                 IsBodyHtml = true
             };
 
-            // multipart/alternative: najpierw TXT, potem HTML
             var plainView = AlternateView.CreateAlternateViewFromString(textBody, Encoding.UTF8, "text/plain");
             var htmlView = AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, "text/html");
 

@@ -15,6 +15,7 @@ namespace QuickGuess.Data
         public DbSet<Leaderboard> Leaderboards => Set<Leaderboard>();
         public DbSet<Song> Songs => Set<Song>();
         public DbSet<Movie> Movies => Set<Movie>();
+        public DbSet<GameSession> GameSessions { get; set; }
 
     }
 }

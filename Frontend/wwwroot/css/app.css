@@ -659,8 +659,8 @@ input:-webkit-autofill {
     padding: 2rem;
     box-shadow: 0 4px 20px rgba(0,0,0,0.25);
     backdrop-filter: blur(6px);
-    padding-top: 1rem; /* by³o 2rem */
-    padding-bottom: 1.2rem; /* lekko ciaœniej */
+    padding-top: 1rem; 
+    padding-bottom: 1.2rem; 
 }
 
     .ranking-box .box-title {
@@ -1034,9 +1034,9 @@ input:disabled {
 }
 
 .film-image-preview {
-    display: block; /* <-- obraz jako blok */
-    margin: 0 auto 3rem; /* <-- auto po bokach = centrowanie */
-    max-width: min(92vw, 800px); /* rozs¹dny limit szerokoœci */
+    display: block; 
+    margin: 0 auto 3rem; 
+    max-width: min(92vw, 800px); 
     height: auto;
     border-radius: 1rem;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -1936,10 +1936,10 @@ input:disabled {
 .btn-hero::after {
     content: "";
     position: absolute;
-    top: -40%; /* by³o -220% */
-    left: -70%; /* by³o -30% */
-    width: 180%; /* by³o 50% */
-    height: 220%; /* by³o 500% */
+    top: -40%; 
+    left: -70%; 
+    width: 180%; 
+    height: 220%; 
     transform: rotate(18deg) translateX(0);
     background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.55), rgba(255,255,255,0));
     mix-blend-mode: screen;
@@ -2053,10 +2053,10 @@ input:disabled {
     padding: 0;
     margin: .45rem 0 1rem;
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 kolumny */
-    gap: .35rem 1rem; /* odstêpy: wiersz / kolumna */
+    grid-template-columns: 1fr 1fr; 
+    gap: .35rem 1rem; 
     font-size: .92rem;
-    color: #64748b; /* szaroœæ bazowa */
+    color: #64748b; 
     align-items: center;
 }
     .pw-rules li {
@@ -2072,13 +2072,12 @@ input:disabled {
             font-weight: 600;
         }
 
-        /* kropka przed tekstem */
         .pw-rules li::before {
             content: "";
             width: 8px;
             height: 8px;
             border-radius: 9999px;
-            background: #cbd5e1; /* szara gdy niespe³nione */
+            background: #cbd5e1; 
             box-shadow: 0 0 0 2px #e5e7eb inset;
             flex: 0 0 8px;
             transform: translateY(1px);
@@ -2534,8 +2533,6 @@ input:disabled {
     background: rgba(255,255,255,.12);
 }
 
-/* propozycje tytu³ów */
-
 .proposals-shell {
     max-width: 980px;
 }
@@ -2602,7 +2599,7 @@ input:disabled {
 .admin-row {
     display: flex;
     min-height: var(--row-h);
-    align-items: center; /* <— to centrowanie pionowe ca³ego bloku meta i akcji */
+    align-items: center; 
     justify-content: space-between;
     gap: .75rem;
     padding: .6rem .75rem;
@@ -2639,23 +2636,22 @@ input:disabled {
         display: flex;
         flex-direction: column;
         gap: .5rem;
-        min-width: 220px; /* stabilny layout */
+        min-width: 220px;
         align-self: center;
         justify-content: center;
     }
 
 
 .admin-list-wrap {
-    /* Liczba widocznych wierszy i ich bazowa wysokoœæ */
     --visible-rows: 5;
-    --row-h: 92px; /* bazowo jeden wiersz ~92px */
-    --gap: .5rem; /* musi odpowiadaæ gap w .admin-list */
+    --row-h: 92px; 
+    --gap: .5rem; 
 
     overflow-y: auto;
-    overscroll-behavior: contain; /* przewijaj tylko listê */
-    padding-right: .25rem; /* oddech na scrollbar */
+    overscroll-behavior: contain; 
+    padding-right: .25rem;
     max-height: calc(var(--visible-rows) * var(--row-h) + (var(--visible-rows) - 1) * var(--gap));
-    scrollbar-gutter: stable both-edges; /* nie skacze layout przy pojawieniu paska */
+    scrollbar-gutter: stable both-edges;
 }
 
 
@@ -2675,10 +2671,8 @@ input:disabled {
         color: #001016;
     }
 
-
-/* Poszerz tylko zak³adkê "Do akceptacji" */
 .proposals-shell.is-wide {
-    max-width: 1120px; /* by³o 980px – "trochê" szerzej */
+    max-width: 1120px; 
 }
 
 
@@ -2689,12 +2683,11 @@ input:disabled {
 
 .proposals-shell .admin-list {
     display: grid;
-    grid-template-columns: 1fr; /* <- kolumna rozci¹ga siê do szerokoœci kontenera */
+    grid-template-columns: 1fr; 
 }
 
-/* Nowy uk³ad meta dla admin list */
 .admin-row {
-    align-items: flex-start; /* akcje po prawej, tekst po lewej od góry */
+    align-items: flex-start; 
 }
 
     .admin-row .meta {
@@ -2721,7 +2714,7 @@ input:disabled {
     .admin-row .note-block {
         opacity: .9;
         line-height: 1.35;
-        margin-left: 0; /* notatka pod tytu³em, bez myœlnika */
+        margin-left: 0; 
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -2736,20 +2729,16 @@ input:disabled {
         gap: .6rem;
     }
 
-/* SZERSZY panel dla zak³adek Piosenki/Filmy */
 .proposals-shell.is-large {
-    /* szerzej i responsywnie */
     max-width: min(96vw, 1200px);
 }
 
-/* niech karta wype³nia szerokoœæ kontenera */
 .proposals-shell .card {
     width: 100%;
 }
 
-/* WY¯SZE i czytelniejsze inputy oraz dopasowane podpowiedzi */
 .propose-card .propose-inputs {
-    --input-h: 56px; /* wysokoœæ pól we/wy (by³o ok. 44px) */
+    --input-h: 56px; 
     gap: .75rem;
 }
 
@@ -2760,13 +2749,11 @@ input:disabled {
     padding: 0 1.1rem;
 }
 
-/* lista podpowiedzi dok³adnie pod pierwszym inputem */
 .propose-card .suggestions-list {
     top: calc(var(--input-h) + .75rem);
     max-width: 100%;
 }
 
-/* wiêkszy przycisk wysy³ania tylko w tym panelu */
 .propose-card .btn-modal.primary {
     padding: 1rem 1.6rem;
     font-size: 1.1rem;
@@ -2777,18 +2764,16 @@ input:disabled {
 .propose-card .btn-modal {
     width: 100%;
     max-width: 100%;
-    box-sizing: border-box; /* redundancja, ale bezpiecznie */
+    box-sizing: border-box;
     display: block;
 }
 
-/* Podpowiedzi dok³adnie pod pierwszym inputem, bez „wyciekania” */
 .propose-card .suggestions-list {
     left: 0;
     right: 0;
     width: auto;
 }
 
-/* Info-okienko nad inputami (zmienne kolory dla zak³adek) */
 .propose-intro {
     --accent: #38bdf8;
     display: flex;
@@ -2806,11 +2791,10 @@ input:disabled {
     .propose-intro.is-song {
         --accent: #38bdf8;
     }
-    /* niebieski */
+
     .propose-intro.is-movie {
         --accent: #ef4444;
     }
-    /* czerwony */
 
     .propose-intro .intro-icon {
         font-size: 1.35rem;
@@ -2836,7 +2820,6 @@ input:disabled {
     }
 
 
-/* Subtelny, „aplikacyjny” scrollbar (Chromium/WebKit) */
 .admin-list-wrap::-webkit-scrollbar {
     width: 10px;
 }
@@ -2856,13 +2839,11 @@ input:disabled {
         filter: brightness(1.05);
     }
 
-/* Subtelny scrollbar dla Firefoksa */
 .admin-list-wrap {
     scrollbar-width: thin;
     scrollbar-color: #22b8f0 rgba(255,255,255,.08);
 }
 
-/* Respons – na wê¿szych ekranach minimalnie wy¿szy wiersz */
 @media (max-width: 780px) {
     .admin-list-wrap {
         --row-h: 104px;
@@ -2908,37 +2889,32 @@ input:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem; /* wiêkszy odstêp miêdzy tytu³em a przyciskiem */
-    padding-right: .35rem; /* ma³y margines od prawej krawêdzi karty */
+    gap: 1rem; 
+    padding-right: .35rem; 
     margin-bottom: 1rem;
 }
 
-/* Panel Piosenka: etykiety w jednej linii */
 .stats-box .stat-label {
-    white-space: nowrap; /* nie zawijaj */
+    white-space: nowrap; 
     overflow: hidden;
-    text-overflow: ellipsis; /* w razie ultra w¹skich ekranów utnij z "..." */
+    text-overflow: ellipsis; 
     line-height: 1.15;
     letter-spacing: .1px;
 }
 
-/* Panel Piosenka – szersze kafelki statystyk */
 .stats-box .stats-grid {
-    /* ka¿dy kafelek min 260px, reszta elastycznie */
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 1rem;
     text-align: center;
 }
 
-/* wiersz zalogowanego gracza */
 .lb-row.is-me {
     position: relative;
-    background: linear-gradient(180deg, rgba(99,102,241,.14), rgba(255,255,255,.06)); /* fioletowy film */
+    background: linear-gradient(180deg, rgba(99,102,241,.14), rgba(255,255,255,.06)); 
     border-color: rgba(99,102,241,.45);
     box-shadow: 0 10px 28px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
 }
 
-    /* ma³a plakietka „Ty” w prawym górnym rogu wiersza */
     .lb-row.is-me::after {
         content: "Ty";
         position: absolute;
@@ -2950,11 +2926,10 @@ input:disabled {
         padding: .18rem .5rem;
         border-radius: 9999px;
         color: #0b1220;
-        background: #a78bfa; /* fiolet */
+        background: #a78bfa; 
         box-shadow: 0 6px 16px rgba(0,0,0,.35);
     }
 
-/* avatar zalogowanego – gradient premium */
 .lb-user .avatar.me {
     background: linear-gradient(180deg,#a78bfa,#6366f1);
     color: #001016;
@@ -2971,8 +2946,6 @@ input:disabled {
         box-shadow: 0 10px 20px rgba(0,0,0,.25);
     }
 
-
-/* === CTA: propozycje tytu³ów (Panel) === */
 .proposal-cta {
     --accent: linear-gradient(90deg,#ffffff,#ffe400,#22c55e,#38bdf8,#ff2097,#ffffff);
     position: relative;
@@ -2989,7 +2962,6 @@ input:disabled {
     overflow: hidden;
 }
 
-    /* cienka linia akcentu u góry */
     .proposal-cta::before {
         content: "";
         position: absolute;
@@ -2999,7 +2971,6 @@ input:disabled {
         opacity: .9;
     }
 
-    /* dekor — delikatny glow */
     .proposal-cta::after {
         content: "";
         position: absolute;
@@ -3048,12 +3019,10 @@ input:disabled {
         margin-top: .35rem;
     }
 
-    /* lekki „lift” przy hoverze */
     .proposal-cta .btn-modal.primary:hover {
         transform: translateY(-2px) scale(1.03);
     }
 
-/* respons */
 @media (max-width: 560px) {
     .proposal-cta {
         grid-template-columns: 40px 1fr;
@@ -3071,7 +3040,6 @@ input:disabled {
     gap: .4rem;
 }
 
-/* --- LB: wiersz z przyciskiem "Zobacz ca³y ranking" --- */
 .lb-more {
     display: grid;
     place-items: center;
@@ -3103,15 +3071,12 @@ input:disabled {
         transform: translateY(0);
     }
 
-
-/* ni¿sze wiersze */
 .lb-row {
-    grid-template-columns: 48px 1fr auto; /* wê¿sza 1. kolumna */
-    padding: .45rem .7rem; /* by³o .6rem .9rem */
-    border-radius: 12px; /* subtelniej */
+    grid-template-columns: 48px 1fr auto; 
+    padding: .45rem .7rem; 
+    border-radius: 12px; 
 }
 
-/* mniejsze miejsce/medale */
 .lb-place .num {
     width: 30px;
     height: 30px;
@@ -3121,9 +3086,7 @@ input:disabled {
 .medal {
     font-size: 1.1rem;
 }
-/* by³o 1.25rem */
 
-/* mniejszy avatar i ciaœniejszy blok u¿ytkownika */
 .lb-user {
     gap: .6rem;
 }
@@ -3134,12 +3097,10 @@ input:disabled {
         font-size: .95rem;
     }
 
-/* delikatnie mniejszy tekst wyniku */
 .lb-score {
     font-size: .95rem;
 }
 
-/* plakietka "Ty" te¿ odrobinê mniejsza, ¿eby nie zjada³a miejsca */
 .lb-row.is-me::after {
     top: -8px;
     right: 10px;
@@ -3147,12 +3108,10 @@ input:disabled {
     padding: .14rem .45rem;
 }
 
-/* Scrollowana lista dla pe³nego rankingu (jak w propozycjach admina) */
 .lb-list-wrap {
-    /* ile wierszy widaæ naraz + baza do wyliczenia wysokoœci */
     --visible-rows: 14;
-    --row-h: 64px; /* dostosowane do "odchudzonych" .lb-row */
-    --gap: .4rem; /* zgodne z .lb-list { gap } */
+    --row-h: 64px; 
+    --gap: .4rem; 
 
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -3161,7 +3120,6 @@ input:disabled {
     scrollbar-gutter: stable both-edges;
 }
 
-    /* Ten sam subtelny scrollbar co w panelu admina */
     .lb-list-wrap::-webkit-scrollbar {
         width: 10px;
     }
@@ -3186,7 +3144,6 @@ input:disabled {
     scrollbar-color: #22b8f0 rgba(255,255,255,.08);
 }
 
-/* Jeœli chcesz ciaœniej na mniejszych ekranach */
 @media (max-width: 780px) {
     .lb-list-wrap {
         --row-h: 70px;
@@ -3194,18 +3151,15 @@ input:disabled {
 }
 
 .ranking-shell .lb-list-wrap {
-    /* pokazuj 8 graczy, reszta scroll */
     --visible-rows: 8;
 }
 
 .profile-container.ranking-shell {
-    /* by³o: min(96vw, 1200px) */
     max-width: min(200vw, 1440px);
-    padding-left: .5rem; /* mniej wewnêtrznych marginesów, wiêc wiêcej miejsca na kartê */
+    padding-left: .5rem; 
     padding-right: .5rem;
 }
 
-/* Ranking: karta ma iœæ na ca³¹ szerokoœæ kontenera */
 .ranking-shell .ranking-box {
     width: 100%;
     max-width: none;
@@ -3226,7 +3180,6 @@ input:disabled {
     gap: .6rem;
 }
 
-/* Odrobinkê ciaœniej po prawej + oddech dla tekstu */
 .game-fullscreen .profile-container.ranking-shell .lb-score {
     font-size: .9rem;
 }
@@ -3238,16 +3191,14 @@ input:disabled {
 
 
 .game-fullscreen .profile-container.ranking-shell .lb-row.is-me::after {
-    top: 2px; /* wewn¹trz wiersza, zamiast -8px ponad nim */
+    top: 2px; 
     right: 8px;
 }
 
-/* trochê „³ó¿ka” nad pierwszym wierszem w scrollowanej liœcie */
 .game-fullscreen .profile-container.ranking-shell .lb-list-wrap {
     padding-top: 10px;
 }
 
-/* --- Typeahead (profesjonalny wygl¹d) --- */
 .typeahead {
     position: relative;
     width: 100%;
@@ -3354,7 +3305,6 @@ input:disabled {
     color: #e5e7eb;
 }
 
-/* Skeletony */
 .is-skeleton {
     pointer-events: none;
     background: rgba(255,255,255,.03);
@@ -3378,7 +3328,6 @@ input:disabled {
     }
 }
 
-/* Na mniejszych ekranach panel trochê wê¿szy */
 @media (max-width: 560px) {
     .typeahead__panel {
         width: min(96vw, 520px);
@@ -3395,15 +3344,12 @@ input:disabled {
 .rank-up {
     color: #22c55e;
 }
-/* zielony */
 .rank-down {
     color: #ef4444;
 }
-/* czerwony */
 .rank-same {
     color: #9ca3af;
 }
-/* szary */
 
 .result-header.loading {
     background: linear-gradient(90deg,#0f172a,#0b1223);
@@ -3433,7 +3379,6 @@ input:disabled {
 .rank-same {
     color: #9ca3af;
 }
-/* pozioma kreska */
 
 .preloader {
     display: flex;
@@ -3459,21 +3404,19 @@ input:disabled {
         opacity: .8;
     }
 
-/* --- Film: mniejszy input + centrowanie --- */
 .typeahead.film-typeahead {
     width: 100%;
-    max-width: 560px; /* mniejszy ni¿ muzyczny */
-    margin-inline: auto; /* wyœrodkowanie */
+    max-width: 560px; 
+    margin-inline: auto; 
 
 }
 
-/* sam input dla filmów */
 .film-guess-input {
     width: 100%;
     padding: .9rem 1.25rem;
     font-size: 1.25rem;
     border-radius: 9999px;
-    border: 3px solid #ef4444; /* czerwony akcent filmów */
+    border: 3px solid #ef4444; 
     outline: none;
     background: #fff;
     color: #111827;
@@ -3486,55 +3429,49 @@ input:disabled {
         box-shadow: 0 0 0 4px rgba(239,68,68,.18);
     }
 
-/* panel podpowiedzi dopasowany do mniejszego inputa */
 .typeahead.film-typeahead .typeahead__panel {
     width: min(560px, 92vw);
 }
 
 .input-wrapper-guess .typeahead {
-    text-align: center; /* rodzic centruje elementy inline/inline-block */
+    text-align: center; 
 }
 
 .input-wrapper-guess .submit-btn {
-    display: inline-block; /* zostaje inline  input nie zwê¿a siê */
-    margin-top: 1.25rem; /* sam odstêp u góry */
+    display: inline-block; 
+    margin-top: 1.25rem; 
 }
 
-/* Piosenka – ciut mniejszy tekst w inpucie */
 .guess-input {
-    font-size: 1.45rem; /* by³o 1.75rem */
+    font-size: 1.45rem; 
     line-height: 1.2;
 }
 
-/* opcjonalnie na wê¿szych ekranach */
 @media (max-width: 640px) {
     .guess-input {
         font-size: 1.25rem;
     }
 }
-/* Input piosenek – mniejszy + idealnie na œrodku */
+
 .guess-input {
-    display: block; /* z inline -> block */
-    margin: 0 auto; /* wyœrodkowanie */
-    max-width: 1600px; /* by³o sztywne 800px */
-    box-sizing: border-box; /* szerokoœæ = razem z borderem */
-    font-size: 1.45rem; /* trochê mniejszy tekst */
+    display: block; 
+    margin: 0 auto; 
+    max-width: 1600px; 
+    box-sizing: border-box; 
+    font-size: 1.45rem; 
     line-height: 1.2;
 }
 
-/* Kontener typeahead w kolumnie, wszystko centralnie */
 .input-wrapper-guess .typeahead {
     display: flex;
     flex-direction: column;
-    align-items: center; /* œrodek w poziomie */
+    align-items: center; 
 }
 
-/* Przycisk pod inpem te¿ na œrodku */
 .input-wrapper-guess .right-btn {
     align-self: center;
 }
 
-/* Na wê¿szych ekranach odrobinkê ciaœniej */
 @media (max-width: 640px) {
     .guess-input {
         font-size: 1.25rem;
@@ -3546,7 +3483,6 @@ input:disabled {
     outline: none !important;
 }
 
-/* === HOME (spójne z .song-hero) === */
 .home-container {
     max-width: 1200px;
     
@@ -3559,7 +3495,6 @@ input:disabled {
     text-align: center;
 }
 
-/* HERO */
 .home-hero {
     position: relative;
     width: 100%;
@@ -3594,7 +3529,6 @@ input:disabled {
         opacity: .9;
     }
 
-/* znaczek/znacznik jak w grze */
 .home-hero__chip {
     display: inline-flex;
     align-items: center;
@@ -3609,7 +3543,6 @@ input:disabled {
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.06),0 6px 18px rgba(0,0,0,.35);
 }
 
-/* tytu³ – gradient + mocny cieñ dla czytelnoœci */
 .home-hero__title {
     margin: .5rem 0 0;
     font-weight: 900;
@@ -3630,7 +3563,6 @@ input:disabled {
     text-shadow: 0 2px 12px rgba(0,0,0,.6);
 }
 
-/* KARTY GIER */
 .home-cards {
     width: 100%;
     display: grid;
@@ -3668,7 +3600,6 @@ input:disabled {
     border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
-/* akcenty typów */
 .home-card.is-music {
     border-left: 5px solid #38bdf8;
 }
@@ -3701,8 +3632,6 @@ input:disabled {
     line-height: 1.5;
 }
 
-/* (porz¹dek) stare klasy z Home mog¹ zostaæ, ale nie s¹ ju¿ u¿ywane */
-
 .home-hero__title,
 .home-hero__title:focus,
 .home-hero__title:focus-visible {
@@ -3711,7 +3640,6 @@ input:disabled {
     border: none !important;
 }
 
-/* Stan ³adowania przycisku logowania */
 .login-btn[disabled] {
     opacity: .8;
     cursor: progress;
@@ -3735,22 +3663,19 @@ input:disabled {
     }
 }
 
-/* karta mo¿e „wystawiaæ” elementy poza siebie */
 .login-card.enhanced {
     position: relative;
     overflow: visible;
 }
 
-/* kotwica do absolutnego pozycjonowania dymka */
 .input-wrapper.has-popover {
     position: relative;
 }
 
-/* p³ywaj¹cy dymek z wymaganiami */
 .pw-popover {
     position: absolute;
     top: 50%;
-    left: calc(100% + 16px); /* na prawo od inputa */
+    left: calc(100% + 16px); 
     transform: translateY(-50%);
     width: 260px;
     padding: .85rem 1rem;
@@ -3760,10 +3685,9 @@ input:disabled {
     border: 1px solid rgba(255,255,255,.14);
     backdrop-filter: blur(8px);
     box-shadow: 0 20px 50px rgba(0,0,0,.45);
-    z-index: 200; /* ponad kart¹ */
+    z-index: 200;
 }
 
-/* „strza³ka” dymka */
 .pw-popover__arrow {
     position: absolute;
     left: -6px;
@@ -3776,7 +3700,6 @@ input:disabled {
     border-bottom: 1px solid rgba(255,255,255,.14);
 }
 
-/* ta sama lista regu³, ale w dymku w uk³adzie pionowym */
 .pw-rules.in-popover {
     margin: 0;
     display: grid;
@@ -3791,8 +3714,6 @@ input:disabled {
         font-weight: 600;
     }
 
-/* Fallback – na wê¿szych ekranach poka¿ dymek pod inputem,
-   ¿eby nie wychodzi³ poza viewport */
 @media (max-width: 980px) {
     .pw-popover {
         left: 0;
@@ -3811,28 +3732,23 @@ input:disabled {
     }
 }
 
-/* Profile.razor.css — dzia³a tylko w tym komponencie dziêki CSS isolation */
-
-/* Grid dla kafelków w zak³adkach Piosenki/Filmy */
 .profile-stats-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .75rem;
 }
 
-    /* Sam kafelek – dopasowany do 120px ³¹cznie z paddingiem/borderem */
     .profile-stats-grid .stat {
-        width: auto; /* by³o: 120px */
+        width: auto; 
         box-sizing: border-box;
         text-align: center;
         padding: .9rem 1rem;
     }
 
-    /* Etykieta i wartoœæ (lekko skompresowane) */
     .profile-stats-grid .stat-label {
         font-size: .8rem;
         line-height: 1.2;
-        white-space: normal; /* pozwól zawijaæ d³u¿sze napisy */
+        white-space: normal; 
         overflow: hidden;
     }
 
@@ -3841,7 +3757,6 @@ input:disabled {
         font-weight: 800;
     }
 
-/* na w¹skich ekranach spadnij do jednej kolumny */
 @media (max-width: 560px) {
     .profile-stats-grid {
         grid-template-columns: 1fr;
@@ -3849,34 +3764,64 @@ input:disabled {
 }
 
 
-/* logo */
-
 .nav-bar .logo {
     display: flex;
     align-items: center;
-    gap: .6rem; /* odstêp miêdzy ikon¹ a tekstem */
+    gap: .6rem; 
 }
 
     .nav-bar .logo .logo-icon {
-        height: 50px; /* dostosuj w razie potrzeby */
+        height: 50px; 
         width: auto;
         display: block;
     }
 
     .nav-bar .logo:hover {
-        color: #00d1ff; /* dzia³a na tekst; obrazek zostaje bez zmian */
+        color: #00d1ff; 
     }
 
-/* Ikona logo w tytule na stronie g³ównej */
 .home-hero__title {
-    display: inline-flex; /* logo + tekst w jednej linii */
+    display: inline-flex; 
     align-items: center;
     gap: .6rem;
 }
 
 .home-hero__logo {
-    height: 56px; /* dopasuj w razie potrzeby */
+    height: 56px; 
     width: auto;
     display: block;
     filter: drop-shadow(0 2px 12px rgba(0,0,0,.4));
+}
+
+.input-wrapper-guess .typeahead {
+    display: block; 
+    text-align: center;
+    position: relative; 
+}
+
+.input-wrapper-guess .right-btn {
+    display: inline-block;
+    margin-top: 1.25rem;
+}
+
+.input-wrapper-guess .typeahead .typeahead__panel {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 10px); 
+    transform: translateX(-50%); 
+    width: min(820px, 92vw); 
+}
+
+@media (max-width: 560px) {
+    .input-wrapper-guess .typeahead .typeahead__panel {
+        width: min(96vw, 520px);
+    }
+}
+
+.input-field.is-invalid {
+    border-color: #ef4444;
+}
+
+.input-field.is-valid {
+    border-color: #22c55e;
 }

@@ -3,14 +3,15 @@
 @using Frontend.Services
 @inject NavigationManager Navigation
 @inject AuthorizedHttpClient AuthHttp
+@inject TokenGuard Guard
 
 <div class="player-panel">
     <div class="left-panel">
         <h2 class="section-title">🎮 Panel gracza</h2>
 
         <div class="mode-buttons">
-            <button class="mode-btn music" @onclick='() => Navigation.NavigateTo("/panel-piosenka")'>🎵 Jaka To Piosenka?</button>
-            <button class="mode-btn film" @onclick='() => Navigation.NavigateTo("/panel-film")'>🎬 Jaki To Film?</button>
+            <button class="mode-btn music" @onclick= "GoPanelPiosenka">🎵 Jaka To Piosenka?</button>
+            <button class="mode-btn film" @onclick="GoPanelFilm">🎬 Jaki To Film?</button>
         </div>
 
         <div class="stats-box">
@@ -19,7 +20,6 @@
                 <button class="btn-modal neutral" @onclick="RefreshCurrent" disabled="@IsLoading">Odśwież</button>
             </div>
 
-            <!-- Własne zakładki statystyk (nie wpływają na TOP10) -->
             <div class="tabs tabs--inside-card">
                 <button class="tab @(ActiveTab == StatTab.Song ? "active" : null)"
                         @onclick="() => SwitchTab(StatTab.Song)">
@@ -33,7 +33,6 @@
 
             @if (ActiveTab == StatTab.Song)
             {
-                @* SONG *@
                 @if (loadingSong)
                 {
                     <div class="stats-grid">
@@ -86,7 +85,6 @@
             }
             else
             {
-                @* FILM *@
                 @if (loadingMovie)
                 {
                     <div class="stats-grid">
@@ -152,7 +150,7 @@
                 <div class="cta-actions">
                     <button class="btn-modal primary"
                             title="Przejdź do panelu propozycji"
-                            @onclick='() => Navigation.NavigateTo("/propozycje")'>
+                            @onclick="GoPropozycje">
                         📝 Zgłoś propozycje
                     </button>
                 </div>
@@ -173,7 +171,6 @@
     private enum StatTab { Song, Film }
     private StatTab ActiveTab = StatTab.Song;
 
-    // STARTOWO: song = true (pokazujemy skeleton), movie = false
     private bool loadingSong = true, loadingMovie = false;
     private string? errorSong, errorMovie;
     private PlayerSongStats? SongStats;
@@ -207,7 +204,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // WAŻNE: wymuś pierwsze ładowanie mimo że loadingSong == true
         await LoadSongStats(force: true);
     }
 
@@ -216,7 +212,6 @@
         if (ActiveTab == tab) return;
         ActiveTab = tab;
 
-        // leniwe ładowanie dla wybranej zakładki
         if (tab == StatTab.Song && SongStats is null)
             await LoadSongStats(force: true);
         else if (tab == StatTab.Film && MovieStats is null)
@@ -231,7 +226,7 @@
 
     private async Task LoadSongStats(bool force = false)
     {
-        if (loadingSong && !force) return;     // <- respektuj force
+        if (loadingSong && !force) return; 
         loadingSong = true;
         errorSong = null;
 
@@ -254,7 +249,7 @@
 
     private async Task LoadMovieStats(bool force = false)
     {
-        if (loadingMovie && !force) return;    // <- respektuj force
+        if (loadingMovie && !force) return; 
         loadingMovie = true;
         errorMovie = null;
 
@@ -274,4 +269,9 @@
             StateHasChanged();
         }
     }
+
+    private async Task GoPanelPiosenka() { if (await Guard.EnsureValidTokenOrRedirect("/panel-piosenka")) Navigation.NavigateTo("/panel-piosenka"); }
+    private async Task GoPanelFilm()     { if (await Guard.EnsureValidTokenOrRedirect("/panel-film"))     Navigation.NavigateTo("/panel-film"); }
+    private async Task GoPropozycje()    { if (await Guard.EnsureValidTokenOrRedirect("/propozycje"))     Navigation.NavigateTo("/propozycje"); }
+    
 }

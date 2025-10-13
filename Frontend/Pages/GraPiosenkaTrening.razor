@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
+@inject TokenGuard Guard
 
 <div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
     <h1 class="game-title">🎯 Jaka To Piosenka?</h1>
@@ -25,13 +26,11 @@
                 <span class="btn-hero__glow"></span>
                 <i class="fas fa-play"></i>
                 <span>Start</span>
-                @*<kbd>Enter</kbd>*@
             </button>
         </section>
     }
     else if (IsRoundLoading || CurrentSong is null)
     {
-        <!-- PRELOADER RUNDY -->
         <div class="preloader" aria-busy="true" aria-live="polite">
             <i class="fas fa-music fa-spin" aria-hidden="true"></i>
             <p>Ładuję rundę…</p>
@@ -82,7 +81,6 @@
                 </div>
             }
 
-            @* === OKNO WYNIKU (z loaderem) === *@
             @if (Answered)
             {
                 <div class="result-modal" role="dialog" aria-modal="true">
@@ -119,7 +117,6 @@
                 </div>
             }
 
-            @* === TYPEAHEAD === *@
             <div class="input-wrapper-guess" id="guess-wrapper">
                 <div class="typeahead">
                     <input class="guess-input typeahead__input"
@@ -196,9 +193,8 @@
         public string? DisplayTitle { get; set; }
     }
 
-    // === Nowe flagi ===
-    private bool IsRoundLoading = false;  // loader przed startem rundy
-    private bool IsResultLoading = false; // loader w oknie wyniku
+    private bool IsRoundLoading = false;  
+    private bool IsResultLoading = false; 
 
     protected SongDto? CurrentSong;
     protected string AudioUrl = "";
@@ -224,7 +220,7 @@
     private int Countdown = 20;
     private System.Timers.Timer? countdownTimer;
 
-    private double Volume = 0.8; // 0..1
+    private double Volume = 0.8; 
     private bool Muted = false;
     private int _volumeP = 80;
     private int VolumeP
@@ -308,6 +304,9 @@
 
     protected async Task StartGame()
     {
+
+        if (!await Guard.EnsureValidTokenOrRedirect(Navigation.Uri)) return;
+
         GameSessionId = Guid.NewGuid();
         Started = true;
         Answered = false;
@@ -315,7 +314,7 @@
         Guess = "";
         LastGuessCorrect = false;
 
-        IsRoundLoading = true;   // ⇦ pokaż loader rundy
+        IsRoundLoading = true; 
 
         var songs = await Http.GetFromJsonAsync<List<SongDto>>("/api/songs/random?count=1");
         if (songs?.Count > 0)
@@ -333,7 +332,7 @@
             StartCountdown();
         }
 
-        IsRoundLoading = false;  // ⇦ zdejmij loader
+        IsRoundLoading = false; 
         StateHasChanged();
     }
 
@@ -342,7 +341,7 @@
         if (CurrentSong == null || Answered) return;
 
         Answered = true;
-        IsResultLoading = true; // ⇦ pokaż loader w modalu
+        IsResultLoading = true; 
         countdownTimer?.Stop();
         await JS.InvokeVoidAsync("Timer.stop");
 
@@ -374,7 +373,13 @@
         LastGuessCorrect = result!.Correct;
         ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
 
-        IsResultLoading = false; // ⇦ ukryj loader
+        if (LastGuessCorrect)
+        {
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "left");
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "right");
+        }
+
+        IsResultLoading = false; 
         StateHasChanged();
     }
 

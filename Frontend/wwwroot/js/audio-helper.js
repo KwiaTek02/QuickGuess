@@ -43,18 +43,54 @@ let visualizerInitialized = false;
 let bars = [];
 let peaks = [];        
 let lastBarCount = 0;
+let currentMediaEl = null;
+
+function teardownVisualizerOnly() {
+    if (animationId) cancelAnimationFrame(animationId);
+    animationId = null;
+    bars.forEach(el => { el.style.setProperty('--h', `4px`); el.style.setProperty('--p', `4px`); });
+    bars = [];
+    peaks = [];
+}
+
+function teardownAudioChain() {
+    try { if (source) source.disconnect(); } catch { }
+    try { if (gainNode) gainNode.disconnect(); } catch { }
+    try { if (analyser) analyser.disconnect(); } catch { }
+
+    source = null;
+    gainNode = null;
+    analyser = null;
+    currentMediaEl = null;
+}
+
+
+window.disposeVisualizer = () => {
+    teardownVisualizerOnly();
+    teardownAudioChain();
+};
 
 
 function initAudioChain(audioElement) {
+    if (!audioElement) return;
+
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (!source) source = audioCtx.createMediaElementSource(audioElement);
-    if (!gainNode) { gainNode = audioCtx.createGain(); source.connect(gainNode); }
-    if (!analyser) {
+
+
+    if (currentMediaEl !== audioElement) {
+        teardownAudioChain(); 
+
+        currentMediaEl = audioElement;
+        source = audioCtx.createMediaElementSource(currentMediaEl);
+        gainNode = audioCtx.createGain();
         analyser = audioCtx.createAnalyser();
+
         analyser.fftSize = 2048;
         analyser.smoothingTimeConstant = 0.82;
         analyser.minDecibels = -90;
         analyser.maxDecibels = -10;
+
+        source.connect(gainNode);
         gainNode.connect(analyser);
         analyser.connect(audioCtx.destination);
     }
@@ -65,11 +101,11 @@ function buildLogBuckets(barCount, spectrumLength, sampleRate) {
     const buckets = [];
     const low = 3;
 
-    // Nyquist = sampleRate / 2
+  
     const nyquist = (sampleRate || 44100) / 2;
-    const maxHz = Math.min(USABLE_MAX_HZ, nyquist); // nie wyżej niż Nyquist
-    let high = Math.floor((maxHz / nyquist) * spectrumLength); // górny bin
-    high = Math.max(low + barCount, Math.min(high, spectrumLength)); // bezpieczeństwo
+    const maxHz = Math.min(USABLE_MAX_HZ, nyquist); 
+    let high = Math.floor((maxHz / nyquist) * spectrumLength); 
+    high = Math.max(low + barCount, Math.min(high, spectrumLength)); 
 
     const edges = new Array(barCount + 1);
     edges[0] = low;
@@ -93,8 +129,13 @@ function buildLogBuckets(barCount, spectrumLength, sampleRate) {
 window.initVisualizer = (barCount = 24) => {
     const audio = document.querySelector("audio");
     if (!audio) return;
-    initAudioChain(audio);
-    bars = Array.from(document.querySelectorAll("#visualizer .bar"));
+
+    initAudioChain(audio); 
+
+    const root = document.getElementById("visualizer");
+    if (!root) return;
+
+    bars = Array.from(root.querySelectorAll(".bar"));
     peaks = new Array(bars.length).fill(0);
 };
 
@@ -106,7 +147,7 @@ function lerpColor(c1, c2, t) {
     return { rgb: `rgb(${r},${g},${b})`, rgba: `rgba(${r},${g},${b},0.45)` };
 }
 
-// kolory jak na pasku, od niskich do wysokich
+
 const HEIGHT_STOPS = [
     { t: 0.00, c: [255, 255, 255] }, // #ffffff
     { t: 0.20, c: [255, 228, 0] }, // #ffe400
@@ -128,7 +169,7 @@ function colorAtHeight(t) {
 }
 
 window.startVisualizer = () => {
-    if (!audioCtx || !analyser) return;
+    if (!audioCtx || !analyser || bars.length === 0) return;
     if (audioCtx.state === "suspended") audioCtx.resume();
 
     const freq = new Uint8Array(analyser.frequencyBinCount);
@@ -143,8 +184,6 @@ window.startVisualizer = () => {
 
         for (let i = 0; i < bars.length; i++) {
             const [a, b] = buckets[i];
-
-            // średnia energii
             let sum = 0;
             for (let j = a; j < b; j++) sum += freq[j];
             const denom = Math.max(1, b - a);
@@ -159,13 +198,9 @@ window.startVisualizer = () => {
             el.style.setProperty('--h', `${h}px`);
             el.style.setProperty('--p', `${peaks[i]}px`);
 
-            // >>> KOLOR Z WYSOKOŚCI (0..1)
-            const tNorm = (h - minPx) / (maxPx - minPx); // 0..1
+            const tNorm = (h - minPx) / (maxPx - minPx);
             const col = colorAtHeight(Math.max(0, Math.min(1, tNorm)));
-
-            // ustaw JEDEN kolor dla całego słupka (nadpisuje wszystko)
             el.style.background = col.rgb;
-            // pasujący glow (poświata)
             el.style.boxShadow = `0 0 16px ${col.rgba}`;
         }
     };
@@ -173,8 +208,7 @@ window.startVisualizer = () => {
 };
 
 window.stopVisualizer = () => {
-    if (animationId) cancelAnimationFrame(animationId);
-    bars.forEach(el => { el.style.setProperty('--h', `4px`); el.style.setProperty('--p', `4px`); });
+    teardownVisualizerOnly();
 };
 
 window.setAudioVolume = (audioElement, volume) => { initAudioChain(audioElement); gainNode.gain.value = volume; };

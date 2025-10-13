@@ -28,10 +28,10 @@ namespace QuickGuess.Models
         public string? PasswordSalt { get; set; }
 
         [Column("account_type")]
-        public string AccountType { get; set; } = "user"; // 'user' or 'admin'
+        public string AccountType { get; set; } = "user"; 
 
         [Column("provider")]
-        public string Provider { get; set; } = "local";   // 'local' or 'google'
+        public string Provider { get; set; } = "local"; 
 
         [Column("google_id")]
         public string? GoogleId { get; set; }

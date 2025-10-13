@@ -29,7 +29,6 @@ namespace QuickGuess.Controllers
             public string Username { get; set; } = "";
         }
 
-        // Publiczny profil po UUID
         [HttpGet("{publicId:guid}")]
         [AllowAnonymous]
         public async Task<ActionResult<ProfileDto>> GetByPublicId(Guid publicId)
@@ -56,7 +55,6 @@ namespace QuickGuess.Controllers
             return user;
         }
 
-        // Mój profil (dla edycji notatki)
         [HttpGet("me")]
         [Authorize]
         public async Task<ActionResult<ProfileDto>> Me()
@@ -67,7 +65,6 @@ namespace QuickGuess.Controllers
             var user = await _db.Users.Where(u => u.Email == email).FirstOrDefaultAsync();
             if (user == null) return NotFound();
 
-            // safety: nadaj public_id jeśli puste
             if (user.PublicId == Guid.Empty)
             {
                 user.PublicId = Guid.NewGuid();
@@ -119,7 +116,6 @@ namespace QuickGuess.Controllers
             if (user is null)
                 return NotFound();
 
-            // zapewnij PublicId
             if (user.PublicId == null || user.PublicId == Guid.Empty)
             {
                 user.PublicId = Guid.NewGuid();

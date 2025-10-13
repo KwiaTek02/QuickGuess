@@ -35,16 +35,12 @@ namespace QuickGuess.Controllers
             Response.Headers["Content-Disposition"] = "inline";
 
 
-            Response.Headers["Access-Control-Allow-Origin"] = "https://localhost:7003"; // <- Twój frontend
-            Response.Headers["Access-Control-Allow-Credentials"] = "true"; // tylko jeśli używasz z Credentials=true
+            Response.Headers["Access-Control-Allow-Origin"] = "https://localhost:7003"; 
+            Response.Headers["Access-Control-Allow-Credentials"] = "true"; 
             Response.Headers["Access-Control-Allow-Methods"] = "GET";
             Response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
 
-            return File(stream, "audio/mpeg", enableRangeProcessing: true); // enableRangeProcessing: true — też ważne!
-
-
-            //return File(stream, "audio/mpeg");
-
+            return File(stream, "audio/mpeg", enableRangeProcessing: true); 
 
         }
 

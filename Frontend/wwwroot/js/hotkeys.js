@@ -7,11 +7,10 @@ window.attachResultHotkeys = () => {
     }
     if (e.key === 'Enter') {
         e.preventDefault();
-    // "Dalej" (StartGame) – spróbuj kliknąć przycisk
     document.querySelector('.result-actions .bg-blue-600')?.click();
     }
   };
     window.removeEventListener('keydown', handler);
-    window.addEventListener('keydown', handler, {once: true }); // jednorazowo
+    window.addEventListener('keydown', handler, {once: true }); 
 };
 </script>

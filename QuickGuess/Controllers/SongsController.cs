@@ -33,8 +33,22 @@ namespace QuickGuess.Controllers
         public async Task<IActionResult> GetTitles([FromQuery] string query)
         {
             if (string.IsNullOrWhiteSpace(query)) return BadRequest();
-            var titles = await _db.Songs
-                .Where(s => EF.Functions.ILike(s.Title, $"%{query}%"))
+
+            var parts = query
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            var q = _db.Songs.AsQueryable();
+
+            foreach (var part in parts)
+            {
+                var p = part; 
+                q = q.Where(s =>
+                    EF.Functions.ILike(s.Title, $"%{p}%") ||
+                    EF.Functions.ILike(s.Artist, $"%{p}%")
+                );
+            }
+
+            var titles = await q
                 .Select(s => $"{s.Artist} - {s.Title} ({s.ReleaseYear})")
                 .Distinct()
                 .Take(10)
@@ -42,5 +56,6 @@ namespace QuickGuess.Controllers
 
             return Ok(titles);
         }
+
     }
 }

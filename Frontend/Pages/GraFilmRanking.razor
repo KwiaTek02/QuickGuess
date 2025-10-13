@@ -5,6 +5,7 @@
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
 @using System.Diagnostics;
+@inject TokenGuard Guard
 
 
 <div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
@@ -61,7 +62,6 @@
                 </div>
             }
 
-            @* === OKNO WYNIKU NAD INPUTEM === *@
             @if (Answered)
             {
                 <div class="result-modal" role="dialog" aria-modal="true">
@@ -145,7 +145,6 @@
                 </div>
             }
 
-            @* === NOWY TYPEAHEAD jak w piosenkach === *@
             <div class="film-input-wrapper-guess" id="guess-wrapper">
                 <div class="typeahead film-typeahead">
                     <input class="film-guess-input typeahead__input"
@@ -217,7 +216,6 @@
     private readonly Stopwatch _sw = new();
     private double LastAnswerDurationSec; 
 
-    // === DTOs ===
     protected class MovieDto { public Guid Id { get; set; } public string Title { get; set; } = string.Empty; }
     protected class GuessResult
     {
@@ -243,7 +241,6 @@
     private bool IsResultLoading = false;
     private bool IsRoundLoading = false;
 
-    // === State ===
     protected MovieDto? CurrentMovie;
     protected string ImageUrl = "";
     protected string Guess = string.Empty;
@@ -254,13 +251,12 @@
 
     private List<string> TitleSuggestions = new();
 
-    // Typeahead state
     private bool OpenSuggestions = false;
     private bool SuggestionsLoading = false;
     private int ActiveIndex = -1;
     private CancellationTokenSource? _sugCts;
 
-    private int Countdown = 20; // (używany przez Timer.js do UI)
+    private int Countdown = 20; 
     private Guid GameSessionId = Guid.NewGuid();
 
     private bool LastGuessCorrect;
@@ -268,8 +264,8 @@
     private int LastRoundPoints;
     private PlayerMovieStats? PlayerStats;
 
-    private int? PreRoundRank;              // pozycja PRZED rundą
-    private string RankTrend = "same";      // "up" | "down" | "same"
+    private int? PreRoundRank; 
+    private string RankTrend = "same";
     private string RankIconClass => RankTrend switch
     {
         "up"   => "fas fa-arrow-up rank-up",
@@ -277,7 +273,6 @@
         _      => "fas fa-minus rank-same"
     };
 
-    // === Helpers ===
     private async void StartCountdown()
     {
         Countdown = 20;
@@ -346,13 +341,23 @@
 
     protected async Task StartGame()
     {
+        if (!await Guard.EnsureValidTokenOrRedirect(Navigation.Uri)) return;
+
         GameSessionId = Guid.NewGuid();
         Started = true;
 
-        // reset stanu rundy
+        var client = await AuthHttp.GetClientAsync();
+        await client.PostAsJsonAsync("/api/game/start", new {
+            sessionId = GameSessionId,
+            mode = "ranking",
+            type = "movie" 
+        });
+
+        await JS.InvokeVoidAsync("gameSession.registerBeforeUnload", GameSessionId);
+
         Answered = false;
         IsResultLoading = false;
-        IsRoundLoading = true;     // ⇦ pokaż spinner dla rundy
+        IsRoundLoading = true; 
         ResultMessage = "";
         Guess = "";
         PlayerStats = null;
@@ -361,7 +366,6 @@
         LastRoundPoints = 0;
         RankTrend = "same";
 
-        // zapamiętaj pozycję sprzed rundy (bez zmian)
         try
         {
             var clientForPre = await AuthHttp.GetClientAsync();
@@ -370,7 +374,6 @@
         }
         catch { PreRoundRank = null; }
 
-        // pobierz film
         var movies = await Http.GetFromJsonAsync<List<MovieDto>>("/api/movies/random?count=1");
         if (movies is null || movies.Count == 0)
         {
@@ -383,16 +386,14 @@
         CurrentMovie = movies[0];
         ImageUrl = $"https://localhost:7236/api/media/movie-image/{CurrentMovie.Id}";
 
-        // daj Blazorowi zrenderować <img> po zmianie src
         StateHasChanged();
         await Task.Delay(100);
 
-        // start pomiaru czasu i wizualnego timera
         StartTime = DateTime.Now;
         _sw.Reset();
         _sw.Start();
 
-        IsRoundLoading = false; // ⇦ zdejmij spinner (UI z timerem i inputem pokaże się teraz)
+        IsRoundLoading = false; 
         StateHasChanged();
 
         StartCountdown();
@@ -404,11 +405,11 @@
         if (CurrentMovie == null || Answered) return;
 
         Answered = true; 
-        IsResultLoading = true; // zablokuj od razu
+        IsResultLoading = true; 
         await JS.InvokeVoidAsync("Timer.stop");
 
         _sw.Stop();
-        var durationMs = (int)_sw.ElapsedMilliseconds;   // zapisujemy w MS
+        var durationMs = (int)_sw.ElapsedMilliseconds; 
         LastAnswerDurationSec = durationMs / 1000.0;     
         LastAnswerDuration = (int)Math.Round(LastAnswerDurationSec);
 
@@ -422,6 +423,8 @@
 
         var client = await AuthHttp.GetClientAsync();
         var res = await client.PostAsJsonAsync("/api/guess/movie", request);
+
+        await client.PostAsJsonAsync("/api/game/finish", new { SessionId = GameSessionId });
 
         if (!res.IsSuccessStatusCode)
         {
@@ -442,11 +445,17 @@
         try
         {
             PlayerStats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
-            UpdateRankTrend(); // ⇦ ustal strzałkę
+            UpdateRankTrend(); 
         }
         catch 
         {  
             // log
+        }
+
+        if (LastGuessCorrect)
+        {
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "left");
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "right");
         }
 
         IsResultLoading = false;   
@@ -466,7 +475,6 @@
 
         await JS.InvokeVoidAsync("Timer.stop");
 
-        // pokaż w oknie 20.00 s
         LastAnswerDurationSec = 20.0;
         LastAnswerDuration = 20;
 
@@ -474,7 +482,7 @@
         var request = new
         {
             itemId = CurrentMovie.Id,
-            guessText = "",          // puste = niepoprawne
+            guessText = "", 
             mode = "ranking",
             duration = 20000
         };
@@ -485,12 +493,12 @@
             if (res.IsSuccessStatusCode)
             {
                 var result = await res.Content.ReadFromJsonAsync<GuessResult>();
-                LastGuessCorrect = result!.Correct;     // false
-                LastRoundPoints = result.Score;         // -50
+                LastGuessCorrect = result!.Correct; 
+                LastRoundPoints = result.Score; 
                 ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
 
                 PlayerStats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
-                UpdateRankTrend(); // ⇦ ustal strzałkę
+                UpdateRankTrend();
             }
             else
             {

@@ -1,4 +1,4 @@
-﻿// wwwroot/js/googleAuth.js
+﻿
 window.googleAuth = (function () {
     let dotnetRef = null;
     let initialized = false;
@@ -9,7 +9,7 @@ window.googleAuth = (function () {
                 resolve();
                 return;
             }
-            // jeśli jeszcze się ładuje przez <script async defer>, poczekaj chwilę
+            
             const maxWaitMs = 5000;
             const start = Date.now();
             (function waitLoop() {
@@ -35,7 +35,7 @@ window.googleAuth = (function () {
                     dotnetRef.invokeMethodAsync("OnGoogleCredential", resp.credential);
                 }
             },
-            ux_mode: "popup",         // popup zamiast pełnego przekierowania
+            ux_mode: "popup",         
             auto_select: false
         });
         initialized = true;
@@ -57,7 +57,7 @@ window.googleAuth = (function () {
 
     function prompt() {
         if (window.google && window.google.accounts && window.google.accounts.id) {
-            window.google.accounts.id.prompt(); // One Tap (opcjonalnie)
+            window.google.accounts.id.prompt(); 
         }
     }
 

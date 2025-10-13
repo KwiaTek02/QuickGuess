@@ -1,5 +1,4 @@
-﻿// wwwroot/js/timer.js
-
+﻿
 const Timer = (function () {
     const FULL_DASH_ARRAY = 283;
     const WARNING_THRESHOLD = 10;
@@ -29,12 +28,12 @@ const Timer = (function () {
     }
 
 
+
     function applyStateClasses() {
         const base = document.getElementById("base-timer");
         const path = document.getElementById("base-timer-path-remaining");
         if (!base || !path) return;
 
-        // reset
         base.classList.remove("is-warning", "is-alert", "pulse");
         path.classList.remove("orange", "red");
         path.classList.add("green");
@@ -46,7 +45,7 @@ const Timer = (function () {
         }
         if (timeLeft <= COLOR_CODES.alert.threshold) {
             base.classList.remove("is-warning");
-            base.classList.add("is-alert", "pulse");  // pulsowanie w końcówce
+            base.classList.add("is-alert", "pulse"); 
             path.classList.remove("orange");
             path.classList.add("red");
         }
@@ -103,3 +102,17 @@ const Timer = (function () {
     };
 })();
 window.Timer = Timer;
+
+
+window.currentSessionId = null;
+
+window.registerSession = function (sessionId) {
+    window.currentSessionId = sessionId;
+};
+
+window.onbeforeunload = () => {
+    if (window.currentSessionId) {
+        navigator.sendBeacon("/api/game/abandon",
+            JSON.stringify({ sessionId: window.currentSessionId }));
+    }
+};

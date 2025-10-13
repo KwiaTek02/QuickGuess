@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject AuthState AuthState
+@inject TokenGuard Guard
 
 <nav class="nav-bar">
     <div class="logo" @onclick='() => Navigation.NavigateTo("/")'>
@@ -90,21 +91,27 @@
     private void HideMenu() => IsMenuOpen = false;
     private void ToggleMenu() => IsMenuOpen = !IsMenuOpen;
 
-    // „Na razie nic nie robią” – zostawiam puste nawigacje /
     private async void GoProfile()
     {
-        // TODO: Navigation.NavigateTo("/profile");
+        
         var id = await JS.InvokeAsync<string>("localStorage.getItem", "authId");
-        if (!string.IsNullOrWhiteSpace(id))
+
+        if (string.IsNullOrEmpty(id))
         {
-            Navigation.NavigateTo($"/profil/{id}");
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
         }
+
+        Navigation.NavigateTo($"/profil/{id}");
+        
+
+
     }
 
-    private void GoReset()
+    private async void GoReset()
     {
-        // TODO: Navigation.NavigateTo("/account/reset");
-        Navigation.NavigateTo("/change-password");
+        if (await Guard.EnsureValidTokenOrRedirect("/change-password"))
+            Navigation.NavigateTo("/change-password");
     }
 
     private async Task Logout()

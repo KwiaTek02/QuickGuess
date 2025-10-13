@@ -3,6 +3,8 @@
 @inject NavigationManager Nav
 @using Microsoft.AspNetCore.Components
 @using System.Net
+@using Frontend.Services
+@inject TokenGuard Guard
 
 <div class="lb">
     @if (!(TylkoPiosenki || TylkoFilmy))
@@ -114,9 +116,13 @@
     private string? userFromStorage;
     private string activeTab = "global";
     private bool isLoading = true;
-    private void ShowFullRanking() => Nav.NavigateTo("/ranking");
 
-    // Wiersz z opcjonalnym Id gracza (Guid.Empty, jeśli API go nie da)
+    private async Task ShowFullRanking()
+    {
+        if (await Guard.EnsureValidTokenOrRedirect("/ranking"))
+            Nav.NavigateTo("/ranking");
+    }
+
     private record Row(Guid Id, string Username, int Score);
     private List<Row> leaderboard = new();
 
@@ -181,20 +187,25 @@
         finally { isLoading = false; }
     }
 
-    // --- Kliknięcie w wiersz -> otwórz profil
+
     private async Task OpenProfile(string username, Guid? id)
     {
-        // 1) Jeśli mamy PublicId z leaderboardu – nawiguj od razu
+        
+        var target = id.HasValue && id.Value != Guid.Empty
+            ? $"/profil/{id.Value}"
+            : Nav.Uri; 
+
+        if (!await Guard.EnsureValidTokenOrRedirect(target))
+            return;
+
         if (id.HasValue && id.Value != Guid.Empty)
         {
             Nav.NavigateTo($"/profil/{id.Value}");
             return;
         }
 
-        // 2) Spróbuj dociągnąć Id po nazwie użytkownika (obsługujemy 2 popularne ścieżki)
         var encoded = WebUtility.UrlEncode(username);
 
-        // /api/profile/username/{name}
         try
         {
             var p1 = await Http.GetFromJsonAsync<ProfileLookup>($"/api/profile/username/{encoded}");
@@ -204,9 +215,9 @@
                 return;
             }
         }
-        catch { /* ignoruj – spróbujemy drugim endpointem */ }
+        catch {  }
 
-        // /api/profile/lookup?username={name}
+        
         try
         {
             var p2 = await Http.GetFromJsonAsync<ProfileLookup>($"/api/profile/lookup?username={encoded}");
@@ -221,24 +232,23 @@
         await JS.InvokeVoidAsync("alert", "Nie udało się otworzyć profilu tego gracza.");
     }
 
-    // --- Modele DTO (z PublicId)
     public class GlobalEntry
     {
-        public Guid PublicId { get; set; }          // <— NOWE
+        public Guid PublicId { get; set; }        
         public string Username { get; set; } = "";
         [System.Text.Json.Serialization.JsonPropertyName("scoreTotal")]
         public int Score { get; set; }
     }
     public class SongsEntry
     {
-        public Guid PublicId { get; set; }          // <— NOWE
+        public Guid PublicId { get; set; }         
         public string Username { get; set; } = "";
         [System.Text.Json.Serialization.JsonPropertyName("scoreSongs")]
         public int Score { get; set; }
     }
     public class MoviesEntry
     {
-        public Guid PublicId { get; set; }          // <— NOWE
+        public Guid PublicId { get; set; }          
         public string Username { get; set; } = "";
         [System.Text.Json.Serialization.JsonPropertyName("scoreMovies")]
         public int Score { get; set; }

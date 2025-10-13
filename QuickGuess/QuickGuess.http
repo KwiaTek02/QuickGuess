@@ -1,6 +1,0 @@
-@QuickGuess_HostAddress = http://localhost:5085
-
-GET {{QuickGuess_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

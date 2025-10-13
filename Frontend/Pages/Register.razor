@@ -1,8 +1,9 @@
 ﻿@page "/register"
+@using System.ComponentModel.DataAnnotations
 @using Frontend.Services
-@using System.Linq
 @inject NavigationManager Navigation
 @inject IAuthService AuthService
+@inject IJSRuntime JS
 
 <div class="fullscreen-bg">
     <div class="login-card enhanced">
@@ -13,128 +14,162 @@
             <p class="error">@Error</p>
         }
 
-        <div class="input-wrapper">
-            <i class="bi bi-person-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Username" placeholder="Nazwa użytkownika" disabled="@IsLoading" />
-        </div>
+        <EditForm Model="@Model" OnValidSubmit="@RegisterUser">
+            <DataAnnotationsValidator />
 
-        <div class="input-wrapper">
-            <i class="bi bi-envelope-fill input-icon"></i>
-            <InputText class="input-field" @bind-Value="Email" placeholder="Email" disabled="@IsLoading" />
-        </div>
+            <div class="input-wrapper">
+                <i class="bi bi-person-fill input-icon"></i>
+                <InputText class="input-field" @bind-Value="Model.Username" placeholder="Nazwa użytkownika" disabled="@IsLoading" />
+            </div>
+            <ValidationMessage For="@(() => Model.Username)" />
 
-        <div class="input-wrapper has-popover">
-            <i class="bi bi-lock-fill input-icon"></i>
+            <div class="input-wrapper">
+                <i class="bi bi-envelope-fill input-icon"></i>
+                <InputText class="input-field" @bind-Value="Model.Email" placeholder="Email" disabled="@IsLoading" />
+            </div>
+            <ValidationMessage For="@(() => Model.Email)" />
 
-            <input class="input-field"
-                   @bind="Password"
-                   @bind:event="oninput"
-                   placeholder="Hasło"
-                   type="@(ShowPw ? "text" : "password")"
-                   disabled="@IsLoading"
-                   @onfocus="() => PwFocused = true"
-                   @onblur="() => PwFocused = false" />
+            <div class="input-wrapper has-popover">
+                <i class="bi bi-lock-fill input-icon"></i>
 
-            <button class="icon-btn" type="button" @onclick="() => ShowPw = !ShowPw" title="Pokaż/ukryj">
-                <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+                <input class="input-field"
+                       @bind="Model.Password"
+                       @bind:event="oninput"
+                       placeholder="Hasło"
+                       type="@(ShowPw ? "text" : "password")"
+                       disabled="@IsLoading"
+                       @onfocus="() => PwFocused = true"
+                       @onblur="() => PwFocused = false" />
+
+                <button class="icon-btn" type="button" @onclick="() => ShowPw = !ShowPw" title="Pokaż/ukryj">
+                    <i class="bi @(ShowPw ? "bi-eye-slash" : "bi-eye")"></i>
+                </button>
+
+                @if (PwFocused || !string.IsNullOrEmpty(Model.Password))
+                {
+                    <div class="pw-popover" role="dialog" aria-label="Wymagania hasła">
+                        <div class="pw-popover__arrow"></div>
+                        <ul class="pw-rules in-popover">
+                            <li class="@(Model.Password?.Length >= 8 ? "ok" : null)">min. 8 znaków</li>
+                            <li class="@(HasUpper ? "ok" : null)">wielka litera</li>
+                            <li class="@(HasLower ? "ok" : null)">mała litera</li>
+                            <li class="@(HasDigit ? "ok" : null)">cyfra</li>
+                            <li class="@(HasSpecial ? "ok" : null)">znak specjalny</li>
+                        </ul>
+                    </div>
+                }
+            </div>
+            <ValidationMessage For="@(() => Model.Password)" />
+
+            <div class="pw-meter" aria-hidden="true">
+                <div class="pw-meter__fill" style="width:@StrengthPct%"></div>
+                <div class="pw-meter__label">Siła hasła: @StrengthLabel</div>
+            </div>
+
+            <div class="input-wrapper">
+                <i class="bi bi-lock-fill input-icon"></i>
+
+                <input class="input-field"
+                       @bind="Model.RepeatPassword"
+                       @bind:event="oninput"
+                       placeholder="Powtórz hasło"
+                       type="@(ShowRepeat ? "text" : "password")"
+                       disabled="@IsLoading" />
+
+                <button class="icon-btn" type="button" @onclick="() => ShowRepeat = !ShowRepeat" title="Pokaż/ukryj">
+                    <i class="bi @(ShowRepeat ? "bi-eye-slash" : "bi-eye")"></i>
+                </button>
+            </div>
+            <ValidationMessage For="@(() => Model.RepeatPassword)" />
+
+            <button type="submit" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
+                @if (IsLoading)
+                {
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                    <span>Rejestrowanie...</span>
+                }
+                else
+                {
+                    <span>Zarejestruj się</span>
+                }
             </button>
 
-            @* Dymek z wymaganiami *@
-            @if (PwFocused || !string.IsNullOrEmpty(Password))
-            {
-                <div class="pw-popover" role="dialog" aria-label="Wymagania hasła">
-                    <div class="pw-popover__arrow"></div>
-                    <ul class="pw-rules in-popover">
-                        <li class="@(Password?.Length >= 8 ? "ok" : null)">min. 8 znaków</li>
-                        <li class="@(HasUpper ? "ok" : null)">wielka litera</li>
-                        <li class="@(HasLower ? "ok" : null)">mała litera</li>
-                        <li class="@(HasDigit ? "ok" : null)">cyfra</li>
-                        <li class="@(HasSpecial ? "ok" : null)">znak specjalny</li>
-                    </ul>
-                </div>
-            }
-        </div>
-        
-        <div class="pw-meter" aria-hidden="true">
-            <div class="pw-meter__fill" style="width:@StrengthPct%"></div>
-            <div class="pw-meter__label">Siła hasła: @StrengthLabel</div>
-        </div>
-
-        <div class="input-wrapper">
-            <i class="bi bi-lock-fill input-icon"></i>
-
-            <input class="input-field"
-                   @bind="RepeatPassword"
-                   @bind:event="oninput"
-                   placeholder="Powtórz hasło"
-                   type="@(ShowRepeat ? "text" : "password")"
-                   disabled="@IsLoading" />
-
-            <button class="icon-btn" type="button" @onclick="() => ShowRepeat = !ShowRepeat" title="Pokaż/ukryj">
-                <i class="bi @(ShowRepeat ? "bi-eye-slash" : "bi-eye")"></i>
-            </button>
-        </div>
-
-        <button @onclick="RegisterUser" class="btn login-btn" disabled="@IsLoading" aria-busy="@IsLoading">
-            @if (IsLoading)
-            {
-                <span class="btn-spinner" aria-hidden="true"></span>
-                <span>Rejestrowanie...</span>
-            }
-            else
-            {
-                <span>Zarejestruj się</span>
-            }
-        </button>
-
-        <div class="auth-links center-row">
-            <span>Masz już konto?</span>
-            <a href="/login" style="margin-left: 0.4rem;">Zaloguj się</a>
-        </div>
+            <div class="auth-links center-row">
+                <span>Masz już konto?</span>
+                <a href="/login" style="margin-left: 0.4rem;">Zaloguj się</a>
+            </div>
+        </EditForm>
     </div>
 </div>
 
 @code {
-    string Username = "";
-    string Email = "";
-    string Password = "";
-    string RepeatPassword = "";
     string Error = "";
     bool IsLoading = false;
     bool PwFocused;
     bool ShowPw;
     bool ShowRepeat;
 
-    
-    int StrengthPct => CalculateStrengthPct(Password);
-    string StrengthLabel => StrengthPct < 40 ? "Słabe" : StrengthPct < 70 ? "Średnie" : "Silne";
+    public class RegisterModel
+    {
+        [Required(ErrorMessage = "Nazwa użytkownika jest wymagana.")]
+        [MinLength(3, ErrorMessage = "Min. 3 znaki.")]
+        [MaxLength(32, ErrorMessage = "Maks. 32 znaki.")]
+        [RegularExpression(@"^[A-Za-z0-9._-]+$", ErrorMessage = "Dozwolone są litery, cyfry, kropki, myślniki i podkreślenia.")]
+        public string Username { get; set; } = "";
 
-    bool HasUpper   => !string.IsNullOrEmpty(Password) && Password.Any(char.IsUpper);
-    bool HasLower   => !string.IsNullOrEmpty(Password) && Password.Any(char.IsLower);
-    bool HasDigit   => !string.IsNullOrEmpty(Password) && Password.Any(char.IsDigit);
-    bool HasSpecial => !string.IsNullOrEmpty(Password) && Password.Any(ch => !char.IsLetterOrDigit(ch));
+        [Required(ErrorMessage = "Email jest wymagany.")]
+        [EmailAddress(ErrorMessage = "Podaj poprawny email.")]
+        [MaxLength(254)]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Hasło jest wymagane.")]
+        [MinLength(8, ErrorMessage = "Min. 8 znaków.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$",
+            ErrorMessage = "Hasło musi zawierać małą i wielką literę, cyfrę i znak specjalny.")]
+        public string Password { get; set; } = "";
+
+        [Required(ErrorMessage = "Powtórz hasło.")]
+        [Compare(nameof(Password), ErrorMessage = "Hasła nie są takie same.")]
+        public string RepeatPassword { get; set; } = "";
+    }
+
+    RegisterModel Model = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
+        if (!string.IsNullOrWhiteSpace(token) && !TokenGuard.IsExpired(token))
+        {
+            Navigation.NavigateTo("/panel", true);
+        }
+    }
+
+    int StrengthPct => CalculateStrengthPct(Model.Password);
+    string StrengthLabel => StrengthPct <= 40 ? "słabe"
+        : StrengthPct <= 60 ? "średnie"
+        : StrengthPct <= 80 ? "dobre"
+        : "bardzo dobre";
+
+    bool HasUpper   => !string.IsNullOrEmpty(Model.Password) && Model.Password.Any(char.IsUpper);
+    bool HasLower   => !string.IsNullOrEmpty(Model.Password) && Model.Password.Any(char.IsLower);
+    bool HasDigit   => !string.IsNullOrEmpty(Model.Password) && Model.Password.Any(char.IsDigit);
+    bool HasSpecial => !string.IsNullOrEmpty(Model.Password) && Model.Password.Any(ch => !char.IsLetterOrDigit(ch));
 
     private async Task RegisterUser()
     {
         if (IsLoading) return;
-
         Error = "";
-
-        if (Password != RepeatPassword)
-        {
-            Error = "Hasła nie są takie same.";
-            return;
-        }
-
         IsLoading = true;
-        await InvokeAsync(StateHasChanged); // pokaż spinner natychmiast
+        await InvokeAsync(StateHasChanged);
 
         try
         {
-            var success = await AuthService.Register(Username, Email, Password);
-            if (!success)
+            var res = await AuthService.Register(Model.Username, Model.Email, Model.Password);
+            if (!res.Success)
             {
-                Error = "Nie udało się zarejestrować. Sprawdź dane.";
+                Error = res.Error ?? "Nie udało się zarejestrować. Sprawdź dane.";
             }
             else
             {
@@ -152,14 +187,12 @@
         if (string.IsNullOrEmpty(p)) return 0;
 
         int score = 0;
-        if (p.Length >= 8)  score++;
-        if (p.Length >= 12) score++;             // bonus za długość
+        if (p.Length >= 8) score++;               
         if (p.Any(char.IsUpper)) score++;
         if (p.Any(char.IsLower)) score++;
         if (p.Any(char.IsDigit)) score++;
         if (p.Any(ch => !char.IsLetterOrDigit(ch))) score++;
 
-        // skala 0..6 -> 0..100
-        return (int)Math.Round(score / 6.0 * 100);
+        return score * 20;                         
     }
 }

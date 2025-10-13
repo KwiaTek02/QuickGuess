@@ -11,7 +11,7 @@ namespace QuickGuess.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // zalogowany użytkownik
+    [Authorize] 
     public class ProposalsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -19,12 +19,10 @@ namespace QuickGuess.Controllers
 
         public class CreateProposalDto
         {
-            public string Type { get; set; } = "";   // "song" | "movie"
+            public string Type { get; set; } = "";  
             public string Title { get; set; } = "";
             public string? ArtistOrNote { get; set; }
         }
-
-        // helper: wykryj admina z ról/claimów
         private static bool IsAdminUser(ClaimsPrincipal user)
         {
             if (user.IsInRole("Admin")) return true;
@@ -54,17 +52,16 @@ namespace QuickGuess.Controllers
             if (type != "song" && type != "movie") return BadRequest("Typ musi być 'song' lub 'movie'.");
 
             var title = (dto.Title ?? "").Trim();
-            if (title.Length < 2 || title.Length > 120) // CHANGED (było 160)
+            if (title.Length < 2 || title.Length > 120) 
                 return BadRequest("Tytuł musi mieć 2–120 znaków.");
 
-            var note = string.IsNullOrWhiteSpace(dto.ArtistOrNote) ? null : dto.ArtistOrNote!.Trim(); // CHANGED
-            if (note is { Length: > 50 }) // CHANGED – walidacja notatki jak w UI
+            var note = string.IsNullOrWhiteSpace(dto.ArtistOrNote) ? null : dto.ArtistOrNote!.Trim(); 
+            if (note is { Length: > 50 }) 
                 return BadRequest("Notatka może mieć maks. 50 znaków.");
 
-            var isAdmin = IsAdminUser(User); // CHANGED
+            var isAdmin = IsAdminUser(User); 
 
-            // limit tylko dla NIE-admina
-            if (!isAdmin) // CHANGED
+            if (!isAdmin) 
             {
                 var today = DateTime.UtcNow.Date;
                 var used = await _db.ProposedTitles
@@ -82,7 +79,7 @@ namespace QuickGuess.Controllers
                 UserId = userId,
                 Type = type,
                 Title = title,
-                ArtistOrNote = note, // CHANGED
+                ArtistOrNote = note, 
                 Status = "pending",
                 CreatedAt = DateTime.UtcNow
             };
@@ -92,7 +89,6 @@ namespace QuickGuess.Controllers
             return Ok(proposal);
         }
 
-        // licznik dziennych użyć (dla UI)
         [HttpGet("my-counts")]
         public async Task<IActionResult> MyCounts()
         {

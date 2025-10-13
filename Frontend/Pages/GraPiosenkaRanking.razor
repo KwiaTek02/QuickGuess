@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject AuthorizedHttpClient AuthHttp
 @inject HttpClient Http
+@inject TokenGuard Guard
 
 
 <div class="game-fullscreen @(!Started ? "is-start" : "has-fixed-title") flex flex-col items-center justify-center min-h-screen text-center px-4">
@@ -26,7 +27,6 @@
                 <span class="btn-hero__glow"></span>
                 <i class="fas fa-play"></i>
                 <span>Start</span>
-                @*<kbd>Enter</kbd>*@
             </button>
         </section>
     }
@@ -83,7 +83,6 @@
                 </div>
             }
 
-            @* === OKNO WYNIKU NAD INPUTEM === *@
             @if (Answered)
             {
 
@@ -183,6 +182,8 @@
         <button class="submit-btn right-btn" @onclick="SubmitGuess" disabled="@Answered">
             ✅ Zatwierdź
         </button>
+        
+
 
         <div class="typeahead__panel @(OpenSuggestions ? "is-open" : "")" id="title-suggestions" role="listbox">
             @if (SuggestionsLoading)
@@ -231,12 +232,6 @@
         </div>
     }
 </div>
-
-
-
-
-
-
 
 @code {
 
@@ -292,7 +287,7 @@
     private CancellationTokenSource? _sugCts;
 
 
-    private readonly Stopwatch _sw = new();   // DODAJ
+    private readonly Stopwatch _sw = new(); 
     private double LastAnswerDurationSec;
 
     private bool IsResultLoading = false;
@@ -311,8 +306,8 @@
         public int TotalScore { get; set; }
     }
 
-    private int? PreRoundRank;              // pozycja PRZED rundą
-    private string RankTrend = "same";      // "up" | "down" | "same"
+    private int? PreRoundRank; 
+    private string RankTrend = "same"; 
     private string RankIconClass => RankTrend switch
     {
         "up"   => "fas fa-arrow-up rank-up",
@@ -322,7 +317,7 @@
 
     private double Circumference => 2 * Math.PI * Radius;
 
-    private int _volumeP = 80;               // 0..100
+    private int _volumeP = 80; 
     private int VolumeP
     {
         get => _volumeP;
@@ -331,13 +326,12 @@
             if (_volumeP == value) return;
             _volumeP = value;
 
-            Volume = Math.Clamp(value / 100.0, 0, 1);   // 0..1
+            Volume = Math.Clamp(value / 100.0, 0, 1); 
             if (!Muted)
             {
-                // Nie wymuszamy renderu; tylko podnosimy głośność w audio
                 _ = JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
             }
-            // Uwaga: nie wywołuj StateHasChanged tutaj – Blazor i tak zrobi rerender po oninput
+            
         }
     }
 
@@ -358,47 +352,6 @@
 
     }
 
-    
-
-    /*private void StartCountdown()
-    {
-        Countdown = 20;
-        Progress = 1.0;
-        StartTime = DateTime.Now;
-
-        // Zatrzymaj poprzednie timery
-        countdownTimer?.Stop();
-        progressTimer?.Stop();
-
-        // Timer sekundowy (co 1s)
-        countdownTimer = new System.Timers.Timer(1000);
-        countdownTimer.Elapsed += async (_, _) =>
-        {
-            if (Countdown > 0)
-            {
-                Countdown--;
-                await InvokeAsync(StateHasChanged);
-            }
-            else
-            {
-                countdownTimer?.Stop();
-                progressTimer?.Stop();
-                await TimeoutGuess(GameSessionId);
-            }
-        };
-        countdownTimer.Start();
-
-        // Timer progresu (co 100ms)
-        progressTimer = new System.Timers.Timer(100);
-        progressTimer.Elapsed += async (_, _) =>
-        {
-            var elapsed = (DateTime.Now - StartTime).TotalSeconds;
-            Progress = Math.Max(0, 1.0 - (elapsed / 20.0));
-            Console.WriteLine($"Progress: {Progress:F2}, StrokeOffset: {StrokeOffset():F2}");
-            await InvokeAsync(StateHasChanged);
-        };
-        progressTimer.Start();
-    }*/
 
     private async Task OnInput(ChangeEventArgs e)
     {
@@ -426,7 +379,7 @@
 
         try
         {
-            // krótki debounce – UI czuje się „żywe”
+            
             await Task.Delay(180, cts.Token);
             var url = $"/api/songs/titles?query={Uri.EscapeDataString(Guess)}";
             var resp = await Http.GetFromJsonAsync<List<string>>(url, cts.Token);
@@ -455,13 +408,14 @@
 
     protected async Task StartGame()
     {
+        if (!await Guard.EnsureValidTokenOrRedirect(Navigation.Uri)) return;
+
         GameSessionId = Guid.NewGuid();
         Started = true;
 
-        // RESET stanu rundy
         Answered = false;
         IsResultLoading = false;
-        IsRoundLoading = true;      // ⇦ pokaż loader
+        IsRoundLoading = true;     
         ResultMessage = "";
         Guess = "";
         PlayerStats = null;
@@ -469,7 +423,24 @@
         LastGuessCorrect = false;
         RankTrend = "same";
 
-        // (opcjonalnie) pre-rank jak wcześniej
+        await JS.InvokeVoidAsync("gameSession.registerBeforeUnload", GameSessionId);
+
+
+        try
+        {
+            var clientForStart = await AuthHttp.GetClientAsync();
+            await clientForStart.PostAsJsonAsync("/api/game/start", new
+            {
+                sessionId = GameSessionId,
+                mode = "ranking",
+                type = "song"
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Błąd startu sesji: {ex.Message}");
+        }
+
         try
         {
             var clientForPre = await AuthHttp.GetClientAsync();
@@ -478,11 +449,9 @@
         }
         catch { PreRoundRank = null; }
 
-        // Pobierz piosenkę
         var songs = await Http.GetFromJsonAsync<List<SongDto>>("/api/songs/random?count=1");
         if (songs is null || songs.Count == 0)
         {
-            // fallback w razie błędu – zdejmij loader i pokaż komunikat
             IsRoundLoading = false;
             ResultMessage = "Nie udało się wylosować piosenki. Spróbuj ponownie.";
             StateHasChanged();
@@ -492,31 +461,28 @@
         CurrentSong = songs[0];
         AudioStarted = false;
 
-        // ustaw źródło audio i zatrzymaj ewentualnie poprzednie
         AudioUrl = $"https://localhost:7236/api/media/song-audio/{CurrentSong.Id}";
         await JS.InvokeVoidAsync("stopAudio", AudioRef);
 
-        // mała pauza na zrenderowanie elementu <audio> po zmianie źródła
         StateHasChanged();
         await Task.Delay(100);
 
-        // ⇩ teraz dopiero „start” – timer, stoper i odliczanie
         StartTime = DateTime.Now;
         _sw.Reset();
         _sw.Start();
 
-        IsRoundLoading = false;   // ⇦ zdejmij loader (UI z timerem i inputem właśnie się pokaże)
+        IsRoundLoading = false;  
         StateHasChanged();
 
-        StartCountdown();         // wystartuj wizualny timer dopiero po zdjęciu loadera
+        StartCountdown(); 
     }
 
 
     protected virtual async Task SubmitGuess()
     {
-        if (CurrentSong == null || Answered) return; // zabezpieczenie przed ponownym kliknięciem
+        if (CurrentSong == null || Answered) return; 
 
-        Answered = true; // BLOKUJ od razu
+        Answered = true; 
         IsResultLoading = true; 
 
         countdownTimer?.Stop();
@@ -524,33 +490,32 @@
 
         await JS.InvokeVoidAsync("Timer.stop");
 
-// ===== NOWE: stoper -> ms + format do UI =====
         _sw.Stop();
-        var durationMs = (int)_sw.ElapsedMilliseconds;   // wysyłamy MS do backendu
-        LastAnswerDurationSec = durationMs / 1000.0;     // do UI (np. 1.23 s)
-        LastAnswerDuration = (int)Math.Round(LastAnswerDurationSec); // żeby stare pole miało sensowną wartość
+        var durationMs = (int)_sw.ElapsedMilliseconds;  
+        LastAnswerDurationSec = durationMs / 1000.0;  
+        LastAnswerDuration = (int)Math.Round(LastAnswerDurationSec); 
 
         var request = new
         {
             itemId = CurrentSong.Id!,
             guessText = CleanGuess(Guess),
             mode = "ranking",
-            duration = durationMs     // <=== BYŁO w sekundach, TERAZ w MS
+            duration = durationMs  
         };
 
         var client = await AuthHttp.GetClientAsync();
         var res = await client.PostAsJsonAsync("/api/guess/song", request);
 
+        await client.PostAsJsonAsync("/api/game/finish", new { SessionId = GameSessionId });
+
         if (!res.IsSuccessStatusCode)
         {
             ResultMessage = "❌ Błąd serwera lub brak autoryzacji.";
             IsResultLoading = false;
-            //Answered = true;
             return;
         }
 
         var result = await res.Content.ReadFromJsonAsync<GuessResult>();
-        //Answered = true;
 
         LastGuessCorrect = result!.Correct;
         LastRoundPoints = result.Score;
@@ -562,16 +527,20 @@
             : $"{result.DisplayTitle ?? result.CorrectTitle}";
 
 
-        //await JS.InvokeVoidAsync("scrollToElement", "result-block");
-
         try
         {
             PlayerStats = await client.GetFromJsonAsync<PlayerSongStats>("/api/stats/me/song-ranking");
-            UpdateRankTrend(); // ⇦ ustal strzałkę
+            UpdateRankTrend(); 
         }
         catch
         {
             // log
+        }
+
+        if (LastGuessCorrect)
+        {
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "left");
+            await JS.InvokeVoidAsync("confettiBlazor.fire", "right");
         }
 
         IsResultLoading = false;   
@@ -595,18 +564,16 @@
         await JS.InvokeVoidAsync("Timer.stop");
         await JS.InvokeVoidAsync("stopAudio", AudioRef);
 
-        // pokaż w oknie 20.00 s
         LastAnswerDurationSec = 20.0;
         LastAnswerDuration = 20;
 
-        // wyślij „złą” odpowiedź (-50) do backendu
         var client = await AuthHttp.GetClientAsync();
         var request = new
         {
             itemId = CurrentSong.Id,
-            guessText = "",          // puste = na pewno niepoprawne
+            guessText = "",          
             mode = "ranking",
-            duration = 20000         // pełne 20 s
+            duration = 20000  
         };
 
         try
@@ -615,14 +582,13 @@
             if (res.IsSuccessStatusCode)
             {
                 var result = await res.Content.ReadFromJsonAsync<GuessResult>();
-                LastGuessCorrect = result!.Correct;     // false
-                LastRoundPoints = result.Score;         // -50
-                // w podtytule pokaż poprawny tytuł
+                LastGuessCorrect = result!.Correct;  
+                LastRoundPoints = result.Score;   
+
                 ResultMessage = result.DisplayTitle ?? result.CorrectTitle;
 
-                // odśwież box statystyk w modalu
                 PlayerStats = await client.GetFromJsonAsync<PlayerSongStats>("/api/stats/me/song-ranking");
-                UpdateRankTrend(); // ⇦ ustal strzałkę
+                UpdateRankTrend(); 
             }
             else
             {
@@ -675,12 +641,6 @@
         return input.Trim();
     }
 
-    /*private async Task ToggleMute()
-    {
-        Muted = !Muted;
-        await JS.InvokeVoidAsync(Muted ? "muteAudio" : "unmuteAudio", AudioRef);
-    }*/
-
     private async Task OnVolumeChanged(ChangeEventArgs e)
     {
         var value = e.Value?.ToString();
@@ -709,11 +669,10 @@
             Volume = Math.Clamp(p / 100.0, 0, 1);
             if (!Muted)
                 await JS.InvokeVoidAsync("setAudioVolume", AudioRef, Volume);
-            StateHasChanged(); // aktualizuje --fill i ikonę
+            StateHasChanged(); 
         }
     }
 
-// Drobna korekta ToggleMute: po włączeniu dźwięku ustaw od razu głośność
     private async Task ToggleMute()
     {
         Muted = !Muted;
@@ -767,10 +726,7 @@
         SuggestionsLoading = false;
     }
 
-    
-    
 
-    // Podświetlanie trafienia (bezpieczne HTML-owo)
     private static string HighlightMatch(string text, string query)
     {
         if (string.IsNullOrWhiteSpace(text)) return System.Net.WebUtility.HtmlEncode(text);

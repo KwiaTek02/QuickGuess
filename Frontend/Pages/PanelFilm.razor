@@ -3,16 +3,17 @@
 @using Frontend.Services
 @inject NavigationManager Navigation
 @inject AuthorizedHttpClient AuthHttp
+@inject TokenGuard Guard
 
 <div class="player-panel">
     <div class="left-panel">
         <h2 class="section-title">🎬 Jaki To Film?</h2>
 
         <div class="mode-buttons">
-            <button class="mode-btn film" @onclick='() => Navigation.NavigateTo("/gra-film-ranking")'>
+            <button class="mode-btn film" @onclick="GoFilmRanking">
                 🎯 Tryb Rankingowy
             </button>
-            <button class="mode-btn film" @onclick='() => Navigation.NavigateTo("/gra-film-trening")'>
+            <button class="mode-btn film" @onclick="GoFilmTrening">
                 🧠 Tryb Treningowy
             </button>
         </div>
@@ -93,7 +94,6 @@
     private string? error;
     private PlayerMovieStats? Stats;
 
-    // identyczny model jak w oknie wyniku gry rankingowej
     public class PlayerMovieStats
     {
         public int Games { get; set; }
@@ -106,6 +106,9 @@
         public int TotalScore { get; set; }
     }
 
+    private async Task GoFilmRanking() { if (await Guard.EnsureValidTokenOrRedirect("/gra-film-ranking")) Navigation.NavigateTo("/gra-film-ranking"); }
+    private async Task GoFilmTrening() { if (await Guard.EnsureValidTokenOrRedirect("/gra-film-trening")) Navigation.NavigateTo("/gra-film-trening"); }
+
     protected override async Task OnInitializedAsync() => await LoadStats();
 
     private async Task LoadStats()
@@ -115,8 +118,6 @@
         try
         {
             var client = await AuthHttp.GetClientAsync();
-            // jeśli Twój backend używa innej ścieżki, np. "/api/stats/me/film-ranking",
-            // zmień endpoint poniżej
             Stats = await client.GetFromJsonAsync<PlayerMovieStats>("/api/stats/me/movie-ranking");
         }
         catch
