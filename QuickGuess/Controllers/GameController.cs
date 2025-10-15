@@ -52,6 +52,7 @@ namespace QuickGuess.Controllers
                 return NotFound();
 
             session.Finished = true;
+            await PenalizeUser(userId, session.Type); 
             await _db.SaveChangesAsync();
 
             return Ok();
